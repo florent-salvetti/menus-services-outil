@@ -77,10 +77,18 @@ class DialogRecap(QDialog):
             pdf = impression.pdf_dossier_complet(self.res.fichiers, sortie)
             impression.imprimer(pdf)
             self.feedback.setText(f"PDF fusionné créé et envoyé à l'impression : {pdf.name} ✓")
-        except impression.SofficeIntrouvable as e:
-            QMessageBox.warning(self, "LibreOffice introuvable", str(e))
+        except impression.ConversionImpossible as e:
+            # Confort, jamais bloquant : les .docx sont déjà dans le dossier.
+            QMessageBox.warning(
+                self, "PDF fusionné non créé",
+                f"{e}\n\nVous pouvez imprimer les .docx directement depuis le dossier.",
+            )
         except Exception as e:  # noqa: BLE001 — on remonte proprement à l'UI
-            QMessageBox.warning(self, "Impression impossible", str(e))
+            QMessageBox.warning(
+                self, "PDF fusionné non créé",
+                f"Impression du PDF fusionné impossible : {e}\n\n"
+                "Les documents .docx restent disponibles dans le dossier.",
+            )
         finally:
             QApplication.restoreOverrideCursor()
             self.b_imprimer.setEnabled(True)

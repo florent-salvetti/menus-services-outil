@@ -17,8 +17,10 @@ pytesseract>=0.3.10
 Pillow>=10.0
 PyMuPDF>=1.24          # rasterisation des RIB au format PDF (en mémoire)
 
-# --- Fusion PDF (impression groupée) ---
+# --- Impression groupée (conversion docx->pdf + fusion) ---
 pypdf>=4.0
+pywin32>=306           # pilotage de Microsoft Word via COM (convertisseur principal)
+# Repli portable : LibreOffice (binaire embarqué dans libreoffice/, voir §11)
 
 # --- Réseau (licence + MAJ données — seuls appels réseau autorisés) ---
 requests>=2.31

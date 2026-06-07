@@ -103,10 +103,32 @@ def test_fusion_pdf_ordre_et_pages(tmp_path):
     assert len(PdfReader(str(sortie)).pages) == 6
 
 
-def test_trouver_soffice_absent_leve_erreur(monkeypatch):
+def test_trouver_soffice_absent_leve_erreur():
     # Ni embarqué ni config.json -> SofficeIntrouvable avec message clair.
-    monkeypatch.setattr(impression, "_SOFFICE_EMBARQUE", RACINE / "libreoffice" / "program" / "soffice.exe")
-    monkeypatch.setattr(impression, "_CONFIG", RACINE / "config.json")
     if not impression._SOFFICE_EMBARQUE.exists() and not impression._CONFIG.exists():
         with pytest.raises(impression.SofficeIntrouvable):
             impression.trouver_soffice()
+
+
+def _docx_minimal(chemin: Path) -> Path:
+    from docx import Document
+    d = Document()
+    d.add_paragraph("Test impression")
+    d.save(str(chemin))
+    return chemin
+
+
+def test_pdf_dossier_complet_sans_docx_leve_valueerror(tmp_path):
+    with pytest.raises(ValueError):
+        impression.pdf_dossier_complet([], tmp_path / "x.pdf")
+
+
+def test_conversion_echec_leve_conversion_impossible(tmp_path):
+    # On force LibreOffice avec un soffice inexistant -> aucun convertisseur
+    # n'aboutit -> ConversionImpossible (déterministe, que Word soit là ou non).
+    docx = _docx_minimal(tmp_path / "doc.docx")
+    with pytest.raises(impression.ConversionImpossible) as exc:
+        impression.convertir([docx], tmp_path, soffice=tmp_path / "soffice_absent.exe",
+                              moteur="libreoffice")
+    # Message non bloquant : rappelle que les .docx restent disponibles.
+    assert ".docx" in str(exc.value)
