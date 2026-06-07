@@ -1,0 +1,49 @@
+# ============================================================================
+# Générateur de documents Les Menus Services — .gitignore
+# ============================================================================
+
+# --- Données sensibles / personnelles (NE JAMAIS committer) ------------------
+# Dossiers bénéficiaires générés (données perso + bancaires)
+dossiers/
+# Base locale SQLite + état de licence
+donnees/
+# Vrai fichier de config : clé de licence + constantes agence (secret)
+config.json
+# RIB scannés éventuellement déposés à la racine
+*.rib
+rib_*.png
+rib_*.jpg
+rib_*.jpeg
+
+# --- Python ------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+env/
+
+# --- Packaging PyInstaller ---------------------------------------------------
+build/
+dist/
+*.spec
+
+# --- Fichiers temporaires LibreOffice / Office -------------------------------
+# Verrous LibreOffice
+.~lock.*#
+# Fichiers temporaires Word/Office
+~$*.doc
+~$*.docx
+~$*.xlsx
+*.tmp
+
+# --- OS / éditeurs -----------------------------------------------------------
+Thumbs.db
+desktop.ini
+.DS_Store
+.idea/
+.vscode/
+*.swp

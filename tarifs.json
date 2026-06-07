@@ -1,0 +1,292 @@
+[
+  {
+    "formule": "Menus du jour 4C",
+    "ttc": 11.8,
+    "ht": 10.7273,
+    "apres_ci": 9.013,
+    "service_ttc": 5.574,
+    "service_ht": 5.0673,
+    "repas_ttc": 6.226,
+    "repas_ht": 5.66
+  },
+  {
+    "formule": "Menus du jour 5C",
+    "ttc": 13.5,
+    "ht": 12.2727,
+    "apres_ci": 10.171,
+    "service_ttc": 6.658,
+    "service_ht": 6.0527,
+    "repas_ttc": 6.842,
+    "repas_ht": 6.22
+  },
+  {
+    "formule": "Menus du marché 4C",
+    "ttc": 12.8,
+    "ht": 11.6364,
+    "apres_ci": 9.612,
+    "service_ttc": 6.376,
+    "service_ht": 5.7964,
+    "repas_ttc": 6.424,
+    "repas_ht": 5.84
+  },
+  {
+    "formule": "Menus du marché 5C",
+    "ttc": 13.8,
+    "ht": 12.5455,
+    "apres_ci": 10.4585,
+    "service_ttc": 6.683,
+    "service_ht": 6.0755,
+    "repas_ttc": 7.117,
+    "repas_ht": 6.47
+  },
+  {
+    "formule": "Déjeuner 2 composantes (Plat et garniture)",
+    "ttc": 12.5,
+    "ht": 11.3636,
+    "apres_ci": 8.769,
+    "service_ttc": 7.462,
+    "service_ht": 6.7836,
+    "repas_ttc": 5.038,
+    "repas_ht": 4.58
+  },
+  {
+    "formule": "Déjeuner 3 composantes (Plat et garniture + 1 composante au choix : entrée, fromage ou dessert)",
+    "ttc": 13.6,
+    "ht": 12.3636,
+    "apres_ci": 9.77,
+    "service_ttc": 7.66,
+    "service_ht": 6.9636,
+    "repas_ttc": 5.94,
+    "repas_ht": 5.4
+  },
+  {
+    "formule": "Déjeuner 4 composantes (Entrée, plat, garniture, laitage ou dessert)",
+    "ttc": 14.9,
+    "ht": 13.5455,
+    "apres_ci": 10.8325,
+    "service_ttc": 8.135,
+    "service_ht": 7.3955,
+    "repas_ttc": 6.765,
+    "repas_ht": 6.15
+  },
+  {
+    "formule": "Déjeuner 5 composantes (Entrée, plat, garniture, laitage et dessert)",
+    "ttc": 15.9,
+    "ht": 14.4545,
+    "apres_ci": 11.701,
+    "service_ttc": 8.398,
+    "service_ht": 7.6345,
+    "repas_ttc": 7.502,
+    "repas_ht": 6.82
+  },
+  {
+    "formule": "Formule déjeuner + dîner léger (7 composantes) (Déjeuner 5 composantes + Dîner 2 composantes sans plat)",
+    "ttc": 19.9,
+    "ht": 18.0909,
+    "apres_ci": 14.713,
+    "service_ttc": 10.374,
+    "service_ht": 9.4309,
+    "repas_ttc": 9.526,
+    "repas_ht": 8.66
+  },
+  {
+    "formule": "Formule déjeuner 4 + dîner 3 (7 composantes) (Déjeuner 4 composantes + Dîner 3 composantes avec plat)",
+    "ttc": 24.6,
+    "ht": 22.3636,
+    "apres_ci": 18.6525,
+    "service_ttc": 11.895,
+    "service_ht": 10.8136,
+    "repas_ttc": 12.705,
+    "repas_ht": 11.55
+  },
+  {
+    "formule": "Journée 6 composantes (déjeuner 3 composantes + Dîner 3 composantes)",
+    "ttc": 23.4,
+    "ht": 21.2727,
+    "apres_ci": 17.64,
+    "service_ttc": 11.52,
+    "service_ht": 10.4727,
+    "repas_ttc": 11.88,
+    "repas_ht": 10.8
+  },
+  {
+    "formule": "Journée 8 composantes (Déjeuner 4 composantes + Dîner 4 composantes)",
+    "ttc": 26.5,
+    "ht": 24.0909,
+    "apres_ci": 20.015,
+    "service_ttc": 12.97,
+    "service_ht": 11.7909,
+    "repas_ttc": 13.53,
+    "repas_ht": 12.3
+  },
+  {
+    "formule": "Journée 9 composantes Déjeuner 5 composantes + Dîner 4 composantes)",
+    "ttc": 27.3,
+    "ht": 24.8182,
+    "apres_ci": 20.7395,
+    "service_ttc": 13.121,
+    "service_ht": 11.9282,
+    "repas_ttc": 14.179,
+    "repas_ht": 12.89
+  },
+  {
+    "formule": "Plat Complet Soir",
+    "ttc": 5.6,
+    "ht": 5.0909,
+    "apres_ci": 3.955,
+    "service_ttc": 3.29,
+    "service_ht": 2.9909,
+    "repas_ttc": 2.31,
+    "repas_ht": 2.1
+  },
+  {
+    "formule": "Supplement : Potage, Hors d'œuvre, laitage, dessert",
+    "ttc": 2.3,
+    "ht": 2.0909,
+    "apres_ci": 1.601,
+    "service_ttc": 1.398,
+    "service_ht": 1.2709,
+    "repas_ttc": 0.902,
+    "repas_ht": 0.82
+  },
+  {
+    "formule": "Supplement : garniture",
+    "ttc": 2.6,
+    "ht": 2.3636,
+    "apres_ci": 1.861,
+    "service_ttc": 1.478,
+    "service_ht": 1.3436,
+    "repas_ttc": 1.122,
+    "repas_ht": 1.02
+  },
+  {
+    "formule": "PQS dessert",
+    "ttc": 2.5,
+    "ht": 2.2727,
+    "apres_ci": 2.207,
+    "service_ttc": 0.586,
+    "service_ht": 0.5327,
+    "repas_ttc": 1.914,
+    "repas_ht": 1.74
+  },
+  {
+    "formule": "PQS plat",
+    "ttc": 2.5,
+    "ht": 2.2727,
+    "apres_ci": 1.943,
+    "service_ttc": 1.114,
+    "service_ht": 1.0127,
+    "repas_ttc": 1.386,
+    "repas_ht": 1.26
+  },
+  {
+    "formule": "Plat seul",
+    "ttc": 5.1,
+    "ht": 4.6364,
+    "apres_ci": 4.508,
+    "service_ttc": 1.184,
+    "service_ht": 1.0764,
+    "repas_ttc": 3.916,
+    "repas_ht": 3.56
+  },
+  {
+    "formule": "Pain",
+    "ttc": 0.25,
+    "ht": 0.25,
+    "apres_ci": null,
+    "service_ttc": null,
+    "service_ht": null,
+    "repas_ttc": 0.25,
+    "repas_ht": 0.25
+  },
+  {
+    "formule": "GOURMET 3C",
+    "ttc": 18.8,
+    "ht": 17.0909,
+    "apres_ci": 14.108,
+    "service_ttc": 9.384,
+    "service_ht": 8.5309,
+    "repas_ttc": 9.416,
+    "repas_ht": 8.56
+  },
+  {
+    "formule": "GOURMET 4C",
+    "ttc": 21.1,
+    "ht": 19.1818,
+    "apres_ci": 16.193,
+    "service_ttc": 9.814,
+    "service_ht": 8.9218,
+    "repas_ttc": 11.286,
+    "repas_ht": 10.26
+  },
+  {
+    "formule": "GOURMET 5C",
+    "ttc": 22.6,
+    "ht": 20.5455,
+    "apres_ci": 17.8065,
+    "service_ttc": 9.587,
+    "service_ht": 8.7155,
+    "repas_ttc": 13.013,
+    "repas_ht": 11.83
+  },
+  {
+    "formule": "GOURMET formule 7 (midi 5 + entrée ou dessert et garniture soir)",
+    "ttc": 27.5,
+    "ht": 25.0,
+    "apres_ci": 22.4345,
+    "service_ttc": 10.131,
+    "service_ht": 9.21,
+    "repas_ttc": 17.369,
+    "repas_ht": 15.79
+  },
+  {
+    "formule": "Forfait homme toutes mains",
+    "ttc": 30,
+    "ht": 25,
+    "apres_ci": 15,
+    "service_ttc": null,
+    "service_ht": null,
+    "repas_ttc": null,
+    "repas_ht": null
+  },
+  {
+    "formule": "Assistance administrative",
+    "ttc": 30,
+    "ht": 25,
+    "apres_ci": 15,
+    "service_ttc": null,
+    "service_ht": null,
+    "repas_ttc": null,
+    "repas_ht": null
+  },
+  {
+    "formule": "Ménage",
+    "ttc": 30,
+    "ht": 25,
+    "apres_ci": 15,
+    "service_ttc": null,
+    "service_ht": null,
+    "repas_ttc": null,
+    "repas_ht": null
+  },
+  {
+    "formule": "Téléassistance",
+    "ttc": 24,
+    "ht": 20,
+    "apres_ci": 12,
+    "service_ttc": null,
+    "service_ht": null,
+    "repas_ttc": null,
+    "repas_ht": null
+  },
+  {
+    "formule": "Téléassistance + détecteur de chute",
+    "ttc": 29.9,
+    "ht": 24.9167,
+    "apres_ci": 14.95,
+    "service_ttc": null,
+    "service_ht": null,
+    "repas_ttc": null,
+    "repas_ht": null
+  }
+]

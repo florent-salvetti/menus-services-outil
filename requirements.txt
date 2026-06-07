@@ -1,0 +1,26 @@
+# Générateur de documents Les Menus Services — dépendances Python
+# (le moteur de calcul, src/calcul.py, n'utilise QUE la stdlib :
+#  ces dépendances servent aux étapes suivantes — UI, docx, OCR, etc.)
+
+# --- Interface ---
+PySide6>=6.6
+
+# --- Génération de documents Word ---
+python-docx>=1.1
+docxtpl>=0.16
+
+# --- Lecture de la grille tarifaire source (.xlsx) ---
+openpyxl>=3.1
+
+# --- OCR du RIB (Tesseract binaire à embarquer séparément) ---
+pytesseract>=0.3.10
+Pillow>=10.0
+
+# --- Fusion PDF (impression groupée) ---
+pypdf>=4.0
+
+# --- Réseau (licence + MAJ données — seuls appels réseau autorisés) ---
+requests>=2.31
+
+# --- Tests ---
+pytest>=8.0

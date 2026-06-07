@@ -1,0 +1,10 @@
+# Normalisation des fins de ligne : Git gère LF en interne, checkout natif.
+* text=auto
+
+# Fichiers binaires : ne jamais normaliser.
+*.docx binary
+*.xlsx binary
+*.pdf  binary
+*.png  binary
+*.jpg  binary
+*.jpeg binary

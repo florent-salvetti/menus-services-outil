@@ -1,0 +1,29 @@
+{
+  "_commentaire": "MODÈLE de configuration. Copier ce fichier en 'config.json' et remplir les valeurs réelles. Le vrai config.json N'EST PAS versionné (cf. .gitignore) car il contient la clé de licence et les constantes de l'agence.",
+
+  "licence": {
+    "cle": "XXXX-XXXX-XXXX",
+    "url_statut": "https://raw.githubusercontent.com/COMPTE/REPO/main/licences.json",
+    "tolerance_hors_ligne_jours": 5
+  },
+
+  "maj_donnees": {
+    "url_version": "https://raw.githubusercontent.com/COMPTE/REPO/main/version.json",
+    "url_tarifs": "https://raw.githubusercontent.com/COMPTE/REPO/main/tarifs.json",
+    "url_modeles_base": "https://raw.githubusercontent.com/COMPTE/REPO/main/modeles/",
+    "activer": true
+  },
+
+  "agence": {
+    "raison_sociale": "SAS BON A DOM'",
+    "adresse": "341 rue d'Aquitaine, 84100 Orange",
+    "telephone": "04 90 70 37 06",
+    "email": "orange@les-menus-services.com",
+    "capital": "10 000 €",
+    "rcs": "853 820 157 RCS Avignon",
+    "tva_intracom": "FR10 853 820 157",
+    "declaration_sap": "853820157 du 12/11/2019",
+    "ics_sepa": "FR18ZZZ86BB45",
+    "representant": "VASNIER Michaël"
+  }
+}
