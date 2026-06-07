@@ -19,7 +19,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
-from src.iban import iban_valide, normaliser
+from src.iban import bic_valide, iban_valide, normaliser
 
 # --- Tesseract EMBARQUÉ (portable, chemin relatif) ------------------------- #
 RACINE = Path(__file__).resolve().parent.parent.parent
@@ -82,16 +82,35 @@ def extraire_iban(texte: str) -> Optional[str]:
 
 
 def extraire_bic(texte: str) -> Optional[str]:
-    """Extrait un BIC (8 ou 11 car. : 6 lettres + 2 alnum + 3 alnum option.)."""
+    """Extrait un BIC du texte OCR.
+
+    Deux garde-fous (leçon d'un vrai RIB) :
+    1. on ne retient QUE des candidats valides (`bic_valide` : format + code
+       pays ISO) — « IDENTITE » (pays « TI ») est écarté ;
+    2. on PRIVILÉGIE le candidat le plus proche APRÈS un libellé « BIC » /
+       « SWIFT » / « Bank Identifier Code », car des mots du document peuvent
+       fortuitement avoir la forme d'un BIC valide (« BANCAIRE » → pays « AI »).
+    Sinon, repli sur le 1er candidat valide.
+    """
     t = texte.upper()
-    m = re.search(
-        r"(?:BIC|SWIFT)[^A-Z0-9]{0,6}([A-Z]{6}[0-9A-Z]{2}(?:[0-9A-Z]{3})?)\b", t
-    )
-    if m:
-        return m.group(1)
-    for mm in re.finditer(r"\b[A-Z]{6}[0-9A-Z]{2}(?:[0-9A-Z]{3})?\b", t):
-        return mm.group(0)
-    return None
+    candidats = [
+        (m.start(), m.group(0))
+        for m in re.finditer(r"\b[A-Z]{6}[0-9A-Z]{2}(?:[0-9A-Z]{3})?\b", t)
+        if bic_valide(m.group(0))
+    ]
+    if not candidats:
+        return None
+
+    libelles = [m.end() for m in re.finditer(r"BIC|SWIFT|BANK\s+IDENTIFIER\s+CODE", t)]
+    if libelles:
+        meilleur = None
+        for pos, bic in candidats:
+            apres = [pos - lp for lp in libelles if pos >= lp]
+            if apres and (meilleur is None or min(apres) < meilleur[0]):
+                meilleur = (min(apres), bic)
+        if meilleur:
+            return meilleur[1]
+    return candidats[0][1]
 
 
 # --------------------------------------------------------------------------- #

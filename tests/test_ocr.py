@@ -101,3 +101,21 @@ def test_bic_8_caracteres():
 
 def test_bic_absent():
     assert extraire_bic("Pas de code ici 12345") is None
+
+
+def test_bic_rib_credit_mutuel_reel():
+    # Cas réel : le titre contient « IDENTITE » (pays TI inexistant -> écarté)
+    # ET « BANCAIRE » (pays AI valide -> piège), mais le vrai BIC « CMCIFR2A »
+    # suit le libellé « BIC (Bank Identifier Code) ».
+    texte = (
+        "RELEVE D'IDENTITE BANCAIRE\n"
+        "IBAN FR76 1027 8060 4100 0204 1590 123\n"
+        "BIC (Bank Identifier Code)  CMCIFR2A\n"
+        "Titulaire : M. DURAND\n"
+    )
+    assert extraire_bic(texte) == "CMCIFR2A"
+
+
+def test_bic_identite_seul_rejete():
+    # « IDENTITE » seul (pays TI) -> aucun BIC valide.
+    assert extraire_bic("RELEVE D'IDENTITE") is None
