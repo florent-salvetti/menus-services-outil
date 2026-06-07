@@ -9,6 +9,9 @@ dossiers/
 donnees/
 # Vrai fichier de config : clé de licence + constantes agence (secret)
 config.json
+# Fichiers de licence : le vrai licences.json vit dans un dépôt SÉPARÉ que le
+# prestataire contrôle ; aucun ne doit être versionné ici (dev compris).
+licences*.json
 # RIB scannés éventuellement déposés à la racine
 *.rib
 rib_*.png
