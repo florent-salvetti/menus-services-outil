@@ -12,9 +12,10 @@ docxtpl>=0.16
 # --- Lecture de la grille tarifaire source (.xlsx) ---
 openpyxl>=3.1
 
-# --- OCR du RIB (Tesseract binaire à embarquer séparément) ---
+# --- OCR du RIB (Tesseract binaire à EMBARQUER dans tesseract/, chemin relatif) ---
 pytesseract>=0.3.10
 Pillow>=10.0
+PyMuPDF>=1.24          # rasterisation des RIB au format PDF (en mémoire)
 
 # --- Fusion PDF (impression groupée) ---
 pypdf>=4.0

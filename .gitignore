@@ -31,6 +31,11 @@ env/
 # construire_template(). Seuls les modèles d'origine font foi.
 modeles/_template_*.docx
 
+# --- Binaire Tesseract embarqué (artefact de livraison, pas source) ----------
+# tesseract.exe + tessdata/ sont placés dans le dossier de l'app et livrés
+# avec, mais ne sont pas versionnés (volumineux, binaire, propre à la plateforme).
+tesseract/
+
 # --- Packaging PyInstaller ---------------------------------------------------
 build/
 dist/
