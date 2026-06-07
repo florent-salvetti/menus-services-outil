@@ -26,7 +26,7 @@ from typing import Optional
 
 from pypdf import PdfWriter
 
-RACINE = Path(__file__).resolve().parent.parent
+from src.chemins import RACINE
 _SOFFICE_EMBARQUE = RACINE / "libreoffice" / "program" / "soffice.exe"
 _CONFIG = RACINE / "config.json"
 
@@ -91,7 +91,7 @@ def trouver_soffice() -> Path:
     if _SOFFICE_EMBARQUE.exists():
         return _SOFFICE_EMBARQUE
     try:
-        cfg = json.loads(_CONFIG.read_text(encoding="utf-8"))
+        cfg = json.loads(_CONFIG.read_text(encoding="utf-8-sig"))
         chemin = cfg.get("libreoffice", {}).get("soffice", "")
         if chemin and Path(chemin).exists():
             return Path(chemin)

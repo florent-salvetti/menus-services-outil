@@ -144,7 +144,8 @@ class Resultat:
 # --------------------------------------------------------------------------- #
 def charger_grille(chemin: str | Path) -> dict[str, Formule]:
     """Charge tarifs.json et retourne un dict {nom_formule: Formule}."""
-    data = json.loads(Path(chemin).read_text(encoding="utf-8"))
+    # utf-8-sig : tolère un BOM (tarifs.json peut être édité/remplacé à la main).
+    data = json.loads(Path(chemin).read_text(encoding="utf-8-sig"))
     return {e["formule"]: Formule.from_dict(e) for e in data}
 
 

@@ -46,6 +46,8 @@ libreoffice/
 build/
 dist/
 *.spec
+# ...sauf notre .spec écrit à la main (recette de build = source à versionner).
+!MenusServices.spec
 
 # --- Fichiers temporaires LibreOffice / Office -------------------------------
 # Verrous LibreOffice

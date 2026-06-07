@@ -34,7 +34,7 @@ from docxtpl import DocxTemplate
 
 from src.iban import RibFr, valider_pour_mandat
 
-RACINE = Path(__file__).resolve().parent.parent.parent
+from src.chemins import RACINE
 MODELE_ORIGINAL = RACINE / "modeles" / "Autorisation de prélèvements.docx"
 TEMPLATE_GENERE = RACINE / "modeles" / "_template_sepa.docx"
 

@@ -9,7 +9,7 @@ from datetime import date, timedelta
 
 import pytest
 
-from src.licence import verifier
+from src.licence import charger_config, verifier
 
 CLE = "MICHAEL-ORANGE-2026"
 URL = "https://exemple/licences.json"  # non appelé : lecteur injecté
@@ -114,6 +114,14 @@ def test_hors_ligne_sans_verif_anterieure_bloque(tmp_path):
     # Serveur injoignable ET aucune vérif réussie passée -> blocage.
     res = verifier(_config(), lecteur=_injoignable, aujourdhui=AUJ, etat_path=tmp_path / "absent.json")
     assert not res.autorise and res.mode == "bloque"
+
+
+def test_config_avec_bom_se_charge(tmp_path):
+    # Un config.json édité sous Windows peut commencer par un BOM UTF-8.
+    # charger_config (utf-8-sig) doit le tolérer (sinon licence "non configurée").
+    p = tmp_path / "config.json"
+    p.write_bytes(b"\xef\xbb\xbf" + json.dumps({"licence": {"cle": "X"}}).encode("utf-8"))
+    assert charger_config(p).get("licence", {}).get("cle") == "X"
 
 
 def test_json_illisible_traite_comme_hors_ligne(tmp_path):

@@ -24,7 +24,7 @@ from src.documents.devis import InfosDevis, generer_devis
 from src.documents.sepa import InfosMandat, generer_mandat
 from src.iban import IbanInvalide, formater_affichage, iban_valide, normaliser
 
-RACINE = Path(__file__).resolve().parent.parent
+from src.chemins import RACINE
 GRILLE = RACINE / "tarifs.json"
 CGV = RACINE / "modeles" / "CGV Les Menus Services Orange client.docx"
 DOSSIERS = RACINE / "dossiers"

@@ -36,7 +36,7 @@ from docxtpl import DocxTemplate
 from src.calcul import Resultat, fmt_num
 from src.documents.devis import _detail_formules  # même rendu « formule » que le devis
 
-RACINE = Path(__file__).resolve().parent.parent.parent
+from src.chemins import RACINE
 _MODELES = {
     "T1": RACINE / "modeles" / "Conditions Particulieres de Vente T1 à partir du 15 juin Menus Services Orange.docx",
     "T2": RACINE / "modeles" / "Conditions Particulieres de Vente T2 à partir du 15 juin Menus Services Orange - Copie.docx",

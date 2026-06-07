@@ -24,7 +24,7 @@ from datetime import date
 from pathlib import Path
 from typing import Callable, Optional
 
-RACINE = Path(__file__).resolve().parent.parent
+from src.chemins import RACINE
 CONFIG = RACINE / "config.json"
 ETAT = RACINE / "donnees" / "licence_etat.json"
 TIMEOUT = 5  # secondes
@@ -41,16 +41,20 @@ class ResultatLicence:
 # Lecture config / état local
 # --------------------------------------------------------------------------- #
 def charger_config(path: Path = CONFIG) -> dict:
-    """Charge config.json ; dict vide si absent/illisible (=> blocage strict)."""
+    """Charge config.json ; dict vide si absent/illisible (=> blocage strict).
+
+    Lecture en utf-8-sig : tolère un BOM (fréquent si le fichier est édité sous
+    Windows avec Notepad/PowerShell), sinon json.loads échouerait sur le BOM.
+    """
     try:
-        return json.loads(Path(path).read_text(encoding="utf-8"))
+        return json.loads(Path(path).read_text(encoding="utf-8-sig"))
     except (FileNotFoundError, json.JSONDecodeError, OSError):
         return {}
 
 
 def _lire_derniere_verif(etat_path: Path) -> Optional[date]:
     try:
-        data = json.loads(Path(etat_path).read_text(encoding="utf-8"))
+        data = json.loads(Path(etat_path).read_text(encoding="utf-8-sig"))
         return date.fromisoformat(data["derniere_verif_reussie"])
     except (FileNotFoundError, json.JSONDecodeError, KeyError, ValueError, OSError):
         return None
@@ -84,7 +88,7 @@ def _lecteur_defaut(url: str) -> str:
     chemin = Path(url)
     if not chemin.is_absolute():
         chemin = RACINE / chemin
-    return chemin.read_text(encoding="utf-8")
+    return chemin.read_text(encoding="utf-8-sig")
 
 
 def _parse_date(valeur) -> Optional[date]:

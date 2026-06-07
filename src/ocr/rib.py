@@ -22,7 +22,7 @@ from typing import Optional
 from src.iban import bic_valide, iban_valide, normaliser
 
 # --- Tesseract EMBARQUÉ (portable, chemin relatif) ------------------------- #
-RACINE = Path(__file__).resolve().parent.parent.parent
+from src.chemins import RACINE
 TESSERACT_DIR = RACINE / "tesseract"
 TESSERACT_EXE = TESSERACT_DIR / "tesseract.exe"
 TESSDATA = TESSERACT_DIR / "tessdata"

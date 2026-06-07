@@ -28,7 +28,7 @@ from docxtpl import DocxTemplate
 from src.calcul import Resultat, fmt_num
 
 # Emplacement des fichiers
-RACINE = Path(__file__).resolve().parent.parent.parent
+from src.chemins import RACINE
 MODELE_ORIGINAL = RACINE / "modeles" / "Trame devis.docx"
 TEMPLATE_GENERE = RACINE / "modeles" / "_template_devis.docx"  # copie balisée
 

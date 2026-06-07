@@ -14,13 +14,13 @@ import re
 from datetime import date
 from pathlib import Path
 
-RACINE = Path(__file__).resolve().parent.parent
+from src.chemins import RACINE
 _FICHIER = RACINE / "donnees" / "compteur_devis.json"
 
 
 def _charger() -> dict:
     try:
-        return json.loads(_FICHIER.read_text(encoding="utf-8"))
+        return json.loads(_FICHIER.read_text(encoding="utf-8-sig"))
     except (FileNotFoundError, json.JSONDecodeError):
         return {"dernier": {}}
 
