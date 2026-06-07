@@ -4,6 +4,7 @@ import pytest
 
 from src.iban import (
     IbanInvalide,
+    bic_valide,
     cle_rib_valide,
     decomposer_fr,
     formater_affichage,
@@ -89,3 +90,30 @@ def test_formater_affichage():
     assert aff.startswith("FR")
     assert "  " not in aff  # blocs séparés par un seul espace
     assert normaliser(aff) == iban
+
+
+# --------------------------------------------------------------------------- #
+# Validation BIC
+# --------------------------------------------------------------------------- #
+def test_bic_valide_11_et_8():
+    assert bic_valide("BNPAFRPPXXX")   # 11 car.
+    assert bic_valide("AGRIFRPP")      # 8 car.
+    assert bic_valide("bnpafrpp xxx")  # espaces + minuscules tolérés
+
+
+def test_bic_invalide_mauvaise_longueur():
+    assert not bic_valide("BNPAFR")      # trop court
+    assert not bic_valide("BNPAFRPPXX")  # 10 car. (ni 8 ni 11)
+
+
+def test_bic_invalide_pays_inexistant():
+    # « IDENTITE » a la bonne forme (8 lettres) mais le pays « TI » n'existe pas.
+    assert not bic_valide("IDENTITE")
+
+
+def test_bic_invalide_chiffres_dans_la_banque():
+    assert not bic_valide("BNP1FRPP")  # les 6 premiers doivent être des lettres
+
+
+def test_bic_vide():
+    assert not bic_valide("")

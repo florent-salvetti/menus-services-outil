@@ -143,3 +143,42 @@ def generer_iban_fr(banque: str, guichet: str, compte: str) -> str:
     cle_rib = calculer_cle_rib(banque, guichet, compte)
     bban = f"{banque}{guichet}{compte}{cle_rib}"
     return f"FR{cle_iban('FR', bban)}{bban}"
+
+
+# --------------------------------------------------------------------------- #
+# Validation BIC (format + code pays ISO)
+# --------------------------------------------------------------------------- #
+#: Codes pays ISO 3166-1 alpha-2 (+ XK Kosovo, usage bancaire SWIFT).
+_PAYS_ISO = frozenset((
+    "AD AE AF AG AI AL AM AO AQ AR AS AT AU AW AX AZ "
+    "BA BB BD BE BF BG BH BI BJ BL BM BN BO BQ BR BS BT BV BW BY BZ "
+    "CA CC CD CF CG CH CI CK CL CM CN CO CR CU CV CW CX CY CZ "
+    "DE DJ DK DM DO DZ EC EE EG EH ER ES ET FI FJ FK FM FO FR "
+    "GA GB GD GE GF GG GH GI GL GM GN GP GQ GR GS GT GU GW GY "
+    "HK HM HN HR HT HU ID IE IL IM IN IO IQ IR IS IT JE JM JO JP "
+    "KE KG KH KI KM KN KP KR KW KY KZ LA LB LC LI LK LR LS LT LU LV LY "
+    "MA MC MD ME MF MG MH MK ML MM MN MO MP MQ MR MS MT MU MV MW MX MY MZ "
+    "NA NC NE NF NG NI NL NO NP NR NU NZ OM "
+    "PA PE PF PG PH PK PL PM PN PR PS PT PW PY QA RE RO RS RU RW "
+    "SA SB SC SD SE SG SH SI SJ SK SL SM SN SO SR SS ST SV SX SY SZ "
+    "TC TD TF TG TH TJ TK TL TM TN TO TR TT TV TW TZ "
+    "UA UG UM US UY UZ VA VC VE VG VI VN VU WF WS XK YE YT ZA ZM ZW"
+).split())
+
+
+def normaliser_bic(bic: str) -> str:
+    """Supprime espaces et met en majuscules."""
+    return re.sub(r"\s+", "", bic).upper()
+
+
+def bic_valide(bic: str) -> bool:
+    """Valide un BIC : 4 lettres (banque) + 2 lettres (pays ISO) + 2 alnum
+    (localité) + 3 alnum optionnels (agence), soit 8 ou 11 caractères.
+
+    Le contrôle du CODE PAYS ISO rejette les mots de bonne longueur mais sans
+    sens (ex. « IDENTITE » collé par erreur → pays « TI » inexistant).
+    """
+    b = normaliser_bic(bic)
+    if not re.fullmatch(r"[A-Z]{6}[0-9A-Z]{2}(?:[0-9A-Z]{3})?", b):
+        return False
+    return b[4:6] in _PAYS_ISO

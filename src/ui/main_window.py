@@ -33,7 +33,7 @@ from src.calcul import charger_grille, fmt_eur
 from src.documents.conditions import JOURS
 from src.dossier import GRILLE, SaisieDossier, calculer_saisie, generer_dossier
 from src import compteur
-from src.iban import formater_affichage, iban_valide, normaliser
+from src.iban import bic_valide, formater_affichage, iban_valide, normaliser, normaliser_bic
 from src.ui.dialog_recap import DialogRecap
 from src.ui.prestations_widget import PrestationsWidget
 
@@ -209,7 +209,9 @@ class MainWindow(QWidget):
         self.iban.setPlaceholderText("FR76 ...")
         self.bic = QLineEdit()
         self.iban_etat = QLabel("")
+        self.bic_etat = QLabel("")
         self.iban.textChanged.connect(self._maj_iban)
+        self.bic.textChanged.connect(self._maj_bic)
 
         g.addWidget(QLabel("Établissement"), 0, 0)
         g.addWidget(self.banque_nom, 0, 1)
@@ -227,8 +229,21 @@ class MainWindow(QWidget):
         g.addWidget(self.iban_etat, 1, 3)
         g.addWidget(QLabel("BIC"), 2, 0)
         g.addWidget(self.bic, 2, 1)
-        g.addWidget(self.bouton_rib, 2, 2, 1, 2)
+        g.addWidget(self.bic_etat, 2, 2, 1, 2)
+        g.addWidget(self.bouton_rib, 3, 1, 1, 3)
         self._form.addWidget(box)
+
+    def _maj_bic(self) -> None:
+        """Indicateur ✓/✗ du BIC (NON bloquant : le mandat se génère sur l'IBAN)."""
+        txt = normaliser_bic(self.bic.text())
+        if not txt:
+            self.bic_etat.setText("")
+        elif bic_valide(txt):
+            self.bic_etat.setText("✓ BIC valide")
+            self.bic_etat.setStyleSheet("color: green;")
+        else:
+            self.bic_etat.setText("✗ BIC invalide (format/pays)")
+            self.bic_etat.setStyleSheet("color: #c0392b;")
 
     def _lire_rib(self) -> None:
         """Ouvre un RIB (image/PDF), pré-remplit IBAN/BIC. Validation humaine.
