@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from PySide6.QtCore import Signal
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QComboBox,
     QHBoxLayout,
@@ -38,12 +38,15 @@ class _LigneWidget(QWidget):
         self.spin.valueChanged.connect(self.modifie)
 
         btn = QPushButton("✕")
-        btn.setFixedWidth(32)
+        btn.setObjectName("boutonSuppr")
+        btn.setFixedSize(28, 28)
+        btn.setCursor(Qt.PointingHandCursor)
         btn.setToolTip("Supprimer cette ligne")
         btn.clicked.connect(lambda: self.supprimee.emit(self))
 
+        lay.setSpacing(8)
         lay.addWidget(self.combo, 1)
-        lay.addWidget(QLabel("× "))
+        lay.addWidget(QLabel("×"))
         lay.addWidget(self.spin)
         lay.addWidget(QLabel("repas/sem."))
         lay.addWidget(btn)
@@ -69,6 +72,8 @@ class PrestationsWidget(QWidget):
         self._layout.addLayout(self._conteneur)
 
         ajouter = QPushButton("➕  Ajouter une formule")
+        ajouter.setObjectName("boutonAjouter")
+        ajouter.setCursor(Qt.PointingHandCursor)
         ajouter.clicked.connect(lambda: self.ajouter_ligne())
         self._layout.addWidget(ajouter)
 

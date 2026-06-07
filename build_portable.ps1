@@ -15,6 +15,7 @@ pyinstaller --noconfirm MenusServices.spec
 
 Write-Host "== 2. Copie des donnees a cote de l'exe ==" -ForegroundColor Cyan
 Copy-Item (Join-Path $racine "modeles")            (Join-Path $dist "modeles") -Recurse -Force
+Copy-Item (Join-Path $racine "assets")             (Join-Path $dist "assets") -Recurse -Force
 Copy-Item (Join-Path $racine "tarifs.json")        $dist -Force
 Copy-Item (Join-Path $racine "config.example.json") $dist -Force
 

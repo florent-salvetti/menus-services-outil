@@ -106,7 +106,7 @@ def main() -> None:
     if res.mode == "hors-ligne":
         # Note discrète : on fonctionne sur la tolérance hors-ligne.
         fenetre.setWindowTitle(fenetre.windowTitle() + "   —   [hors-ligne]")
-    fenetre.show()
+    fenetre.showMaximized()  # s'ouvre en grand (plein écran utile, barre de titre conservée)
     sys.exit(app.exec())
 
 

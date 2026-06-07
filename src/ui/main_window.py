@@ -14,6 +14,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QButtonGroup,
     QCheckBox,
+    QComboBox,
     QFileDialog,
     QFrame,
     QGridLayout,
@@ -36,13 +37,15 @@ from src import compteur
 from src.iban import bic_valide, formater_affichage, iban_valide, normaliser, normaliser_bic
 from src.ui.dialog_recap import DialogRecap
 from src.ui.prestations_widget import PrestationsWidget
+from src.ui.style import appliquer_ombre, construire_bandeau, feuille_qss
 
 
 def _section(titre: str) -> tuple[QGroupBox, QGridLayout]:
     box = QGroupBox(titre)
+    appliquer_ombre(box)  # effet « carte »
     grid = QGridLayout(box)
-    grid.setHorizontalSpacing(8)
-    grid.setVerticalSpacing(6)
+    grid.setHorizontalSpacing(10)
+    grid.setVerticalSpacing(9)
     return box, grid
 
 
@@ -54,14 +57,24 @@ class MainWindow(QWidget):
 
         self._formules = list(charger_grille(GRILLE).keys())
 
+        # Habillage charte Les Menus Services (visuel uniquement).
+        self.setStyleSheet(feuille_qss())
+
         racine = QVBoxLayout(self)
+        racine.setContentsMargins(0, 0, 0, 0)
+        racine.setSpacing(0)
+        racine.addWidget(construire_bandeau())  # bandeau logo (décoratif)
+
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         racine.addWidget(scroll, 1)
 
         contenu = QWidget()
+        contenu.setObjectName("page")
         scroll.setWidget(contenu)
         self._form = QVBoxLayout(contenu)
+        self._form.setContentsMargins(22, 18, 22, 18)
+        self._form.setSpacing(16)
 
         self._build_client()
         self._build_beneficiaire()
@@ -77,8 +90,9 @@ class MainWindow(QWidget):
     # ----------------------------------------------------------------- client
     def _build_client(self) -> None:
         box, g = _section("Client / payeur")
-        self.civilite = QLineEdit("Mme")
-        self.civilite.setFixedWidth(60)
+        self.civilite = QComboBox()
+        self.civilite.addItems(["Mme", "M."])
+        self.civilite.setFixedWidth(80)
         self.prenom = QLineEdit()
         self.nom = QLineEdit()
         self.adresse = QLineEdit()
@@ -147,6 +161,7 @@ class MainWindow(QWidget):
     # ------------------------------------------------------------ prestations
     def _build_prestations(self) -> None:
         box = QGroupBox("Prestations")
+        appliquer_ombre(box)  # effet « carte »
         lay = QVBoxLayout(box)
         self.prestations = PrestationsWidget(self._formules)
         self.prestations.modifie.connect(self._maj_apercu)
@@ -164,12 +179,14 @@ class MainWindow(QWidget):
         grp.addButton(self.tournee_t1)
         grp.addButton(self.tournee_t2)
         ligne_t = QHBoxLayout()
+        ligne_t.setSpacing(20)
         ligne_t.addWidget(self.tournee_t1)
         ligne_t.addWidget(self.tournee_t2)
         ligne_t.addStretch()
 
         self.jours = {}
         ligne_j = QHBoxLayout()
+        ligne_j.setSpacing(16)
         for j in JOURS:
             cb = QCheckBox(j)
             self.jours[j] = cb
@@ -186,6 +203,7 @@ class MainWindow(QWidget):
         self.date_premiere.setPlaceholderText("jj/mm/aaaa")
         self.date_premiere.setFixedWidth(110)
         ligne_c = QHBoxLayout()
+        ligne_c.setSpacing(16)
         ligne_c.addWidget(self.comm_attendre)
         ligne_c.addWidget(self.comm_avant)
         ligne_c.addWidget(QLabel("1re livraison"))
@@ -319,11 +337,12 @@ class MainWindow(QWidget):
     # ------------------------------------------------------------- barre bas
     def _build_barre(self, racine: QVBoxLayout) -> None:
         barre = QFrame()
+        barre.setObjectName("barreResume")
         barre.setFrameShape(QFrame.StyledPanel)
         lay = QVBoxLayout(barre)
 
         self.apercu = QLabel("Aperçu : —")
-        self.apercu.setStyleSheet("font-weight: bold;")
+        self.apercu.setObjectName("apercu")
         self.statut = QLabel("")
         self.sepa_note = QLabel("")
 
@@ -335,6 +354,7 @@ class MainWindow(QWidget):
         ligne.addLayout(infos, 1)
 
         self.bouton = QPushButton("Générer les documents")
+        self.bouton.setObjectName("boutonPrincipal")
         self.bouton.setMinimumHeight(44)
         self.bouton.clicked.connect(self._generer)
         ligne.addWidget(self.bouton)
@@ -345,7 +365,7 @@ class MainWindow(QWidget):
     # --------------------------------------------------------------- collecte
     def _collecter(self) -> SaisieDossier:
         return SaisieDossier(
-            civilite=self.civilite.text(), prenom=self.prenom.text(), nom=self.nom.text(),
+            civilite=self.civilite.currentText(), prenom=self.prenom.text(), nom=self.nom.text(),
             adresse=self.adresse.text(), cp=self.cp.text(), ville=self.ville.text(),
             tel=self.tel.text(), email=self.email.text(),
             benef_identique=self.benef_identique.isChecked(),
