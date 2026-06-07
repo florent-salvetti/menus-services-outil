@@ -26,6 +26,11 @@ __pycache__/
 venv/
 env/
 
+# --- Artefacts régénérables --------------------------------------------------
+# Copie-template balisée, reconstruite depuis l'original par construire_template().
+# Seul modeles/Trame devis.docx fait foi.
+modeles/_template_devis.docx
+
 # --- Packaging PyInstaller ---------------------------------------------------
 build/
 dist/

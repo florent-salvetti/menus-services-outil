@@ -233,9 +233,17 @@ def arrondi(valeur: Decimal) -> Decimal:
     return valeur.quantize(DEUX_DEC, rounding=ROUND_HALF_UP)
 
 
-def fmt_eur(valeur: Decimal) -> str:
-    """Formate un montant à la française avec espaces insecables."""
+def fmt_num(valeur: Decimal) -> str:
+    """Formate un nombre a la francaise SANS symbole EUR.
+
+    Utile quand la trame Word porte deja EUR / Euros HT : on ne remplit
+    alors que le nombre, sans dupliquer le symbole monetaire.
+    """
     q = arrondi(valeur)
     s = f"{q:,.2f}"  # 1,234.56
-    s = s.replace(",", " ").replace(".", ",")  # milliers insecables + virgule
-    return f"{s} €"
+    return s.replace(",", " ").replace(".", ",")
+
+
+def fmt_eur(valeur: Decimal) -> str:
+    """Formate un montant a la francaise avec espace insecable et EUR."""
+    return f"{fmt_num(valeur)} €"
