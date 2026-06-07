@@ -18,11 +18,11 @@ from pathlib import Path
 from typing import Optional
 
 from src import compteur
-from src.calcul import Resultat, calculer, charger_grille
+from src.calcul import Resultat, calculer, charger_grille, fmt_eur
 from src.documents.conditions import InfosConditions, generer_conditions
 from src.documents.devis import InfosDevis, generer_devis
 from src.documents.sepa import InfosMandat, generer_mandat
-from src.iban import IbanInvalide, iban_valide, normaliser
+from src.iban import IbanInvalide, formater_affichage, iban_valide, normaliser
 
 RACINE = Path(__file__).resolve().parent.parent
 GRILLE = RACINE / "tarifs.json"
@@ -81,6 +81,7 @@ class ResultatGeneration:
     fichiers: list[Path]
     avertissements: list[str]
     resultat: Resultat
+    recap: str = ""
 
 
 # --------------------------------------------------------------------------- #
@@ -130,6 +131,71 @@ def calculer_saisie(saisie: SaisieDossier) -> Optional[Resultat]:
         return None
     grille = charger_grille(GRILLE)
     return calculer(lignes, grille)
+
+
+# --------------------------------------------------------------------------- #
+# Récapitulatif copiable (à reporter manuellement dans le CRM)
+# --------------------------------------------------------------------------- #
+def recapitulatif(saisie: SaisieDossier, resultat: Resultat) -> str:
+    """Texte propre des infos clés du dossier, pour copier-coller vers le CRM.
+
+    L'outil ne touche jamais au CRM : ce texte est juste fourni à recopier.
+    Le reste à charge affiché est `total_apres_ci` (crédit sur la part service).
+    """
+    lignes: list[str] = []
+    titre = f"Devis {saisie.devis_num}" if saisie.devis_num else "Devis"
+    lignes.append(f"=== DOSSIER — {titre} — {saisie.date_devis} ===")
+    lignes.append("")
+
+    lignes.append(f"CLIENT       {_client_complet(saisie)}")
+    adr = _adresse_complete(saisie)
+    if adr:
+        lignes.append(f"             {adr}")
+    contact = " · ".join(
+        x for x in (
+            f"Tél {saisie.tel}" if saisie.tel.strip() else "",
+            f"Email {saisie.email}" if saisie.email.strip() else "",
+        ) if x
+    )
+    if contact:
+        lignes.append(f"             {contact}")
+
+    if not saisie.benef_identique:
+        _, _, prenom_nom = _beneficiaire(saisie)
+        lignes.append(f"BÉNÉFICIAIRE {prenom_nom}")
+        if saisie.benef_adresse.strip():
+            lignes.append(f"             {saisie.benef_adresse}")
+        if saisie.lieu_prestation.strip():
+            lignes.append(f"             Lieu de prestation : {saisie.lieu_prestation}")
+
+    tournee = "T1 (Lun/Jeu)" if saisie.tournee == "T1" else "T2 (Mar/Ven)"
+    jours = ", ".join(saisie.jours_repas) if saisie.jours_repas else "—"
+    lignes.append(f"LIVRAISON    Tournée {tournee} · Jours : {jours}")
+
+    presta = " + ".join(f"{l.formule.nom} ×{l.quantite}" for l in resultat.lignes)
+    lignes.append(f"PRESTATIONS  {presta}  ({resultat.nb_repas_total} repas/sem.)")
+
+    lignes.append(
+        f"MONTANTS     Hebdo {fmt_eur(resultat.total_hebdo_ttc)} TTC "
+        f"({fmt_eur(resultat.total_hebdo_ht)} HT)"
+    )
+    lignes.append(f"             Mensuel moyen {fmt_eur(resultat.cout_mensuel_ttc)} TTC")
+    lignes.append(
+        f"             Reste à charge après crédit d'impôt : "
+        f"{fmt_eur(resultat.total_apres_ci)} / mois"
+    )
+
+    iban = normaliser(saisie.iban)
+    if iban:
+        lignes.append(
+            f"IBAN         {formater_affichage(iban)}  (non conservé par l'outil)"
+        )
+
+    if resultat.avertissements:
+        lignes.append("")
+        lignes.extend(f"⚠ {a}" for a in resultat.avertissements)
+
+    return "\n".join(lignes)
 
 
 # --------------------------------------------------------------------------- #
@@ -227,5 +293,9 @@ def generer_dossier(saisie: SaisieDossier, racine_sortie: Path = DOSSIERS) -> Re
         compteur.enregistrer_numero(saisie.devis_num)
 
     return ResultatGeneration(
-        dossier=dossier, fichiers=fichiers, avertissements=avertissements, resultat=resultat
+        dossier=dossier,
+        fichiers=fichiers,
+        avertissements=avertissements,
+        resultat=resultat,
+        recap=recapitulatif(saisie, resultat),
     )

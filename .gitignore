@@ -31,10 +31,13 @@ env/
 # construire_template(). Seuls les modèles d'origine font foi.
 modeles/_template_*.docx
 
-# --- Binaire Tesseract embarqué (artefact de livraison, pas source) ----------
-# tesseract.exe + tessdata/ sont placés dans le dossier de l'app et livrés
-# avec, mais ne sont pas versionnés (volumineux, binaire, propre à la plateforme).
+# --- Binaires embarqués (artefacts de livraison, pas source) -----------------
+# Placés dans le dossier de l'app et livrés avec, mais non versionnés
+# (volumineux, binaires, propres à la plateforme).
+# OCR : tesseract.exe + tessdata/
 tesseract/
+# Impression PDF : LibreOffice Portable (program/soffice.exe)
+libreoffice/
 
 # --- Packaging PyInstaller ---------------------------------------------------
 build/

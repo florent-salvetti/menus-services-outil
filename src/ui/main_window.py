@@ -34,6 +34,7 @@ from src.documents.conditions import JOURS
 from src.dossier import GRILLE, SaisieDossier, calculer_saisie, generer_dossier
 from src import compteur
 from src.iban import formater_affichage, iban_valide, normaliser
+from src.ui.dialog_recap import DialogRecap
 from src.ui.prestations_widget import PrestationsWidget
 
 
@@ -390,14 +391,9 @@ class MainWindow(QWidget):
         # Numéro de devis suivant pour le prochain dossier.
         self.devis_num.setText(compteur.numero_propose())
 
-        fichiers = "\n".join(f"  • {f.name}" for f in res.fichiers)
-        avert = "\n".join(f"  ⚠ {a}" for a in res.avertissements)
-        msg = f"Dossier généré :\n{res.dossier}\n\nFichiers :\n{fichiers}"
-        if avert:
-            msg += f"\n\nAvertissements :\n{avert}"
-        QMessageBox.information(self, "Génération terminée", msg)
-
+        # Ouvre le dossier dans l'explorateur, puis le récap copiable + impression.
         self._ouvrir_dossier(res.dossier)
+        DialogRecap(self, res).exec()
 
     @staticmethod
     def _ouvrir_dossier(chemin: Path) -> None:

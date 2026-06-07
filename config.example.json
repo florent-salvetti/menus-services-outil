@@ -14,6 +14,11 @@
     "activer": true
   },
 
+  "_commentaire_libreoffice": "Chemin vers soffice.exe pour l'impression groupée (PDF fusionné), utilisé SEULEMENT si LibreOffice n'est pas embarqué dans le dossier libreoffice/. Laisser vide pour la version embarquée portable.",
+  "libreoffice": {
+    "soffice": ""
+  },
+
   "agence": {
     "raison_sociale": "SAS BON A DOM'",
     "adresse": "341 rue d'Aquitaine, 84100 Orange",
