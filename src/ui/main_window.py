@@ -14,6 +14,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QButtonGroup,
     QCheckBox,
+    QFileDialog,
     QFrame,
     QGridLayout,
     QGroupBox,
@@ -213,12 +214,61 @@ class MainWindow(QWidget):
         g.addWidget(self.banque_nom, 0, 1)
         g.addWidget(QLabel("Adresse banque"), 0, 2)
         g.addWidget(self.banque_adresse, 0, 3)
+        self.bouton_rib = QPushButton("📷  Lire un RIB scanné…")
+        self.bouton_rib.setToolTip(
+            "Pré-remplit IBAN/BIC depuis un RIB (image ou PDF). "
+            "Le fichier n'est ni copié ni supprimé ; à vérifier avant usage."
+        )
+        self.bouton_rib.clicked.connect(self._lire_rib)
+
         g.addWidget(QLabel("IBAN"), 1, 0)
         g.addWidget(self.iban, 1, 1, 1, 2)
         g.addWidget(self.iban_etat, 1, 3)
         g.addWidget(QLabel("BIC"), 2, 0)
         g.addWidget(self.bic, 2, 1)
+        g.addWidget(self.bouton_rib, 2, 2, 1, 2)
         self._form.addWidget(box)
+
+    def _lire_rib(self) -> None:
+        """Ouvre un RIB (image/PDF), pré-remplit IBAN/BIC. Validation humaine.
+
+        Le fichier source est seulement LU (en mémoire) : ni copié, ni supprimé.
+        """
+        chemin, _ = QFileDialog.getOpenFileName(
+            self, "Choisir un RIB scanné", "",
+            "RIB (*.pdf *.png *.jpg *.jpeg *.tif *.tiff *.bmp)",
+        )
+        if not chemin:
+            return
+
+        from src.ocr.rib import lire_rib  # import paresseux (Tesseract requis ici)
+
+        try:
+            res = lire_rib(chemin)
+        except FileNotFoundError as e:
+            QMessageBox.warning(self, "Tesseract introuvable", str(e))
+            return
+        except Exception as e:  # noqa: BLE001 — lecture OCR robuste
+            QMessageBox.warning(self, "Lecture du RIB impossible", str(e))
+            return
+
+        if res.iban:
+            self.iban.setText(formater_affichage(res.iban))  # déclenche ✓/✗
+        if res.bic:
+            self.bic.setText(res.bic)
+
+        if not res.iban:
+            QMessageBox.information(
+                self, "RIB lu",
+                "Aucun IBAN reconnu : saisie manuelle nécessaire.\n"
+                "(Vérifiez la qualité du scan.)",
+            )
+        elif not res.iban_valide:
+            QMessageBox.warning(
+                self, "IBAN à vérifier",
+                "IBAN reconnu mais clé mod 97 invalide → lecture probablement "
+                "imparfaite.\nComparez au RIB et corrigez avant de générer.",
+            )
 
     def _maj_iban(self) -> None:
         txt = normaliser(self.iban.text())
