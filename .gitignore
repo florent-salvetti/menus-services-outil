@@ -27,9 +27,9 @@ venv/
 env/
 
 # --- Artefacts régénérables --------------------------------------------------
-# Copie-template balisée, reconstruite depuis l'original par construire_template().
-# Seul modeles/Trame devis.docx fait foi.
-modeles/_template_devis.docx
+# Copies-templates balisées, reconstruites depuis les originaux par
+# construire_template(). Seuls les modèles d'origine font foi.
+modeles/_template_*.docx
 
 # --- Packaging PyInstaller ---------------------------------------------------
 build/
