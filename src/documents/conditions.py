@@ -136,6 +136,25 @@ def _inserer_paragraphe(ancre, texte: str, *, avant: bool):
     return para
 
 
+def _rendre_beneficiaire_conditionnel(doc) -> None:
+    """Entoure les lignes d'identité du bénéficiaire (Nom/Prénom + Adresse) de
+    `{%p if benef_present %}` / `{%p endif %}`.
+
+    Quand le bénéficiaire est identique au client, ces lignes DISPARAISSENT
+    (cohérent avec le devis) : pas de répétition de l'identité client. L'en-tête
+    de section « Identité et coordonnées du bénéficiaire » est conservé.
+    """
+    debut = fin = None
+    for p in doc.paragraphs:
+        if "{{ benef_nom }}" in p.text:
+            debut = p
+        elif "{{ benef_adresse }}" in p.text:
+            fin = p
+    if debut is not None and fin is not None:
+        _inserer_paragraphe(debut, "{%p if benef_present %}", avant=True)
+        _inserer_paragraphe(fin, "{%p endif %}", avant=False)
+
+
 def _rendre_lieu_conditionnel(doc) -> None:
     """Remplit la valeur du lieu et entoure le bloc (libellé + valeur) de
     `{%p if lieu_prestation %}` / `{%p endif %}` : tout disparaît si vide.
@@ -198,6 +217,7 @@ def construire_template(tournee: str) -> Path:
     # est vide (= identique à l'adresse client). Le libellé réglementaire (avec
     # sa coquille « l'adresser ») n'est PAS modifié.
     _rendre_lieu_conditionnel(doc)
+    _rendre_beneficiaire_conditionnel(doc)
 
     # --- Ligne des jours (Table 0) : remplir les cellules-marques ------------
     for table in doc.tables:
@@ -222,7 +242,12 @@ def construire_template(tournee: str) -> Path:
 def contexte_conditions(infos: InfosConditions, resultat: Resultat) -> dict:
     """Construit le contexte docxtpl. Valeurs tarifaires = celles du devis."""
     selection = {_cle_jour(j) for j in infos.jours_repas}
+    # Présence d'un bénéficiaire distinct : sinon le bloc identité est masqué.
+    benef_present = "X" if (
+        infos.benef_nom.strip() or infos.benef_prenom.strip() or infos.benef_adresse.strip()
+    ) else ""
     ctx = {
+        "benef_present": benef_present,
         # identité
         "client_nom": infos.client_nom,
         "client_adresse": infos.client_adresse,
