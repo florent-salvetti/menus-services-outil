@@ -22,9 +22,8 @@ from decimal import Decimal, InvalidOperation
 from src import compteur
 from src.calcul import Remise, Resultat, calculer, charger_grille, fmt_eur
 from src.documents.conditions import InfosConditions, generer_conditions
-from src.documents.devis import InfosDevis, generer_devis
+from src.documents.devis import InfosDevis, _nom_ligne, generer_devis
 from src.documents.sepa import InfosMandat, generer_mandat
-from src.iban import IbanInvalide, formater_affichage, iban_valide, normaliser
 
 from src.chemins import RACINE
 GRILLE = RACINE / "tarifs.json"
@@ -39,6 +38,7 @@ DOSSIERS = RACINE / "dossiers"
 class LignePrestation:
     formule: str
     nb_repas: int
+    regime: str = ""  # régime particulier : "diabétique", "sans sel", "mixé" ou ""
 
 
 @dataclass
@@ -74,13 +74,9 @@ class SaisieDossier:
     jours_repas: list[str] = field(default_factory=list)
     commencement: str = "attendre"
     date_premiere_livraison: str = ""
-    # Paiement — le mandat SEPA n'est généré QUE pour "prelevement"
+    # Paiement — l'autorisation de prélèvement n'est générée QUE pour
+    # "prelevement", SANS coordonnées bancaires (le client joint son RIB).
     mode_paiement: str = ""         # "prelevement", "virement", "cheque" ou ""
-    # Banque (mandat SEPA)
-    banque_nom: str = ""
-    banque_adresse: str = ""
-    iban: str = ""
-    bic: str = ""
     # Métadonnées devis
     devis_num: str = ""
     date_devis: str = ""
@@ -171,7 +167,10 @@ def _remise(s: SaisieDossier) -> Optional[Remise]:
 # --------------------------------------------------------------------------- #
 def calculer_saisie(saisie: SaisieDossier) -> Optional[Resultat]:
     """Calcule les totaux pour les lignes valides. None si aucune ligne."""
-    lignes = [(l.formule, l.nb_repas) for l in saisie.lignes if l.formule and l.nb_repas > 0]
+    lignes = [
+        (l.formule, l.nb_repas, l.regime)
+        for l in saisie.lignes if l.formule and l.nb_repas > 0
+    ]
     if not lignes:
         return None
     grille = charger_grille(GRILLE)
@@ -220,7 +219,7 @@ def recapitulatif(saisie: SaisieDossier, resultat: Resultat) -> str:
     jours = ", ".join(saisie.jours_repas) if saisie.jours_repas else "—"
     lignes.append(f"LIVRAISON    Tournée {tournee} · Jours : {jours}")
 
-    presta = " + ".join(f"{l.formule.nom} ×{l.quantite}" for l in resultat.lignes)
+    presta = " + ".join(f"{_nom_ligne(l)} ×{l.quantite}" for l in resultat.lignes)
     lignes.append(f"PRESTATIONS  {presta}  ({resultat.nb_repas_total} repas/sem.)")
 
     if resultat.remise_hebdo_ttc > 0:
@@ -239,18 +238,12 @@ def recapitulatif(saisie: SaisieDossier, resultat: Resultat) -> str:
     )
 
     paiement = {
-        "prelevement": "Prélèvement automatique",
+        "prelevement": "Prélèvement automatique (RIB à joindre par le client)",
         "virement": "Virement bancaire",
         "cheque": "Chèque bancaire",
     }.get(saisie.mode_paiement)
     if paiement:
         lignes.append(f"PAIEMENT     {paiement}")
-
-    iban = normaliser(saisie.iban)
-    if iban and saisie.mode_paiement == "prelevement":
-        lignes.append(
-            f"IBAN         {formater_affichage(iban)}  (non conservé par l'outil)"
-        )
 
     if resultat.avertissements:
         lignes.append("")
@@ -290,8 +283,13 @@ def generer_dossier(saisie: SaisieDossier, racine_sortie: Path = DOSSIERS) -> Re
     client_nom_doc = f"{client_nom}\n{tutelle}" if tutelle else client_nom
 
     # --- Devis --------------------------------------------------------------
+    # La ligne « Monsieur / Madame » de la trame reflète la civilité saisie ;
+    # l'identité est donc rendue SANS le préfixe M./Mme (pas de doublon).
+    civilite_longue = {"M.": "Monsieur", "Mme": "Madame"}.get(saisie.civilite.strip(), "")
+    nom_sans_civilite = " ".join(x for x in (saisie.prenom, saisie.nom) if x.strip())
     infos_devis = InfosDevis(
-        client_nom=client_nom_doc,
+        civilite=civilite_longue,
+        client_nom=f"{nom_sans_civilite}\n{tutelle}" if tutelle else nom_sans_civilite,
         client_adresse=client_adresse,
         devis_num=saisie.devis_num,
         date_devis=saisie.date_devis,
@@ -305,15 +303,15 @@ def generer_dossier(saisie: SaisieDossier, racine_sortie: Path = DOSSIERS) -> Re
     # Conditions : la trame a son PROPRE bloc tutelle (« Si le client a été
     # placé sous tutelle… représenté par …, tuteur ») → on le remplit, sans
     # dupliquer la mention sous l'identité.
+    # Article 1 (identité du bénéficiaire) : TOUJOURS rempli (retour client) —
+    # avec l'identité du client quand le bénéficiaire est identique.
     infos_cond = InfosConditions(
         client_nom=f"{saisie.nom} {saisie.prenom}".strip(),
         client_adresse=client_adresse,
         tuteur=_tuteur_detail(saisie),
-        benef_nom=benef_nom,
-        benef_prenom=benef_prenom,
-        # Adresse du bénéficiaire : saisie EXPLICITE si différent, jamais
-        # l'adresse client par défaut (champ de contrat — on ne devine pas).
-        benef_adresse=saisie.benef_adresse if not saisie.benef_identique else "",
+        benef_nom=benef_nom if not saisie.benef_identique else saisie.nom,
+        benef_prenom=benef_prenom if not saisie.benef_identique else saisie.prenom,
+        benef_adresse=saisie.benef_adresse if not saisie.benef_identique else client_adresse,
         lieu_prestation=saisie.lieu_prestation if not saisie.benef_identique else "",
         commencement=saisie.commencement,
         date_premiere_livraison=saisie.date_premiere_livraison,
@@ -329,29 +327,19 @@ def generer_dossier(saisie: SaisieDossier, racine_sortie: Path = DOSSIERS) -> Re
         )
     )
 
-    # --- Mandat SEPA (uniquement si paiement par prélèvement automatique) ---
-    iban = normaliser(saisie.iban)
-    if saisie.mode_paiement != "prelevement":
-        pass  # virement / chèque / non renseigné : pas de mandat, pas d'alerte
-    elif not iban:
-        avertissements.append("Mandat SEPA non généré (pas d'IBAN saisi).")
-    elif not iban_valide(iban):
-        avertissements.append("IBAN invalide (clé mod 97) : mandat SEPA non généré — vérifiez l'IBAN.")
-    else:
+    # --- Autorisation de prélèvement (si paiement par prélèvement) ----------
+    # Générée SANS coordonnées bancaires (demande client) : le client joint
+    # son RIB, comme l'indique la trame. Aucune saisie d'IBAN dans l'outil.
+    if saisie.mode_paiement == "prelevement":
         infos_sepa = InfosMandat(
             debiteur_nom=client_nom_doc,
             debiteur_adresse=client_adresse,
-            banque_nom=saisie.banque_nom,
-            banque_adresse=saisie.banque_adresse,
             lieu_signature=saisie.lieu,
             date_signature=saisie.date_devis,
         )
-        try:
-            fichiers.append(
-                generer_mandat(infos_sepa, iban, saisie.bic, dossier / f"Mandat_SEPA_{base}.docx")
-            )
-        except IbanInvalide as e:
-            avertissements.append(f"Mandat SEPA non généré : {e}")
+        fichiers.append(
+            generer_mandat(infos_sepa, None, "", dossier / f"Mandat_SEPA_{base}.docx")
+        )
 
     # --- CGV (jointes telles quelles) ---------------------------------------
     if CGV.exists():

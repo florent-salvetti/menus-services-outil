@@ -190,18 +190,22 @@ def construire_template(
 # --------------------------------------------------------------------------- #
 # Contexte de rendu
 # --------------------------------------------------------------------------- #
-def contexte_mandat(infos: InfosMandat, rib: RibFr) -> dict:
-    """Construit le dict de rendu docxtpl (\\n -> saut de ligne via docxtpl)."""
+def contexte_mandat(infos: InfosMandat, rib: Optional[RibFr]) -> dict:
+    """Construit le dict de rendu docxtpl (\\n -> saut de ligne via docxtpl).
+
+    `rib=None` : les cases bancaires restent VIDES (le client joint son RIB,
+    cf. mention « Joindre un relevé d'identité bancaire » de la trame).
+    """
     debiteur = "\n".join(x for x in (infos.debiteur_nom, infos.debiteur_adresse) if x.strip())
     etablissement = "\n".join(x for x in (infos.banque_nom, infos.banque_adresse) if x.strip())
     return {
         "debiteur": debiteur,
         "etablissement": etablissement,
         # Blocs RIB, un par cellule du tableau « compte à débiter ».
-        "rib_banque": rib.banque,
-        "rib_guichet": rib.guichet,
-        "rib_compte": rib.compte,
-        "rib_cle": rib.cle_rib,
+        "rib_banque": rib.banque if rib else "",
+        "rib_guichet": rib.guichet if rib else "",
+        "rib_compte": rib.compte if rib else "",
+        "rib_cle": rib.cle_rib if rib else "",
         "date_signature": infos.date_signature,
         "lieu_signature": infos.lieu_signature,
     }
@@ -212,21 +216,23 @@ def contexte_mandat(infos: InfosMandat, rib: RibFr) -> dict:
 # --------------------------------------------------------------------------- #
 def generer_mandat(
     infos: InfosMandat,
-    iban: str,
+    iban: Optional[str],
     bic: str,
     sortie: Path,
     template: Optional[Path] = None,
 ) -> Path:
-    """Génère le mandat SEPA rempli dans `sortie`.
+    """Génère l'autorisation de prélèvement remplie dans `sortie`.
 
-    Valide l'IBAN (mod 97 + clé RIB) AVANT toute génération : si invalide,
+    `iban=None` (flux nominal — demande client) : le document sort avec les
+    cases bancaires VIDES ; le client joint son RIB. Si un IBAN est fourni,
+    il est validé (mod 97 + clé RIB) AVANT toute génération : si invalide,
     lève IbanInvalide et n'écrit aucun fichier.
 
     ⚠️ iban/bic ne sont PAS persistés : utilisés uniquement ici, en mémoire.
     (Le BIC n'a pas de champ dans cette trame ; il n'est pas inscrit.)
     """
-    # Validation bloquante (lève IbanInvalide avec message précis si KO).
-    rib = valider_pour_mandat(iban)
+    # Validation bloquante si IBAN fourni (lève IbanInvalide si KO).
+    rib = valider_pour_mandat(iban) if iban else None
 
     if template is None:
         template = TEMPLATE_GENERE

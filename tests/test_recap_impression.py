@@ -25,8 +25,7 @@ def _saisie(**kw) -> SaisieDossier:
         benef_identique=True,
         lignes=[LignePrestation("Menus du marché 4C", 6), LignePrestation("Menus du jour 5C", 4)],
         tournee="T1", jours_repas=["Lundi", "Jeudi"],
-        devis_num="2026-0001", date_devis="07/06/2026",
-        iban="FR7630004000010000123456789",
+        devis_num="10062026-1", date_devis="07/06/2026",
     )
     base.update(kw)
     return SaisieDossier(**base)
@@ -49,28 +48,19 @@ def test_recap_montants_et_formules(resultat):
     assert "10 repas/sem." in txt
 
 
-def test_recap_iban_avec_mention_non_conserve(resultat):
+def test_recap_jamais_d_iban(resultat):
+    # Plus AUCUNE coordonnée bancaire dans l'outil (demande client) :
+    # le prélèvement rappelle juste que le RIB est à joindre.
     txt = recapitulatif(_saisie(mode_paiement="prelevement"), resultat)
-    assert "FR76 3000 4000 0100 0012 3456 789" in txt
-    assert "non conservé par l'outil" in txt
-
-
-def test_recap_sans_iban(resultat):
-    txt = recapitulatif(_saisie(iban="", mode_paiement="prelevement"), resultat)
     assert "IBAN" not in txt
-
-
-def test_recap_iban_masque_sans_prelevement(resultat):
-    # IBAN saisi mais paiement par chèque : pas de ligne IBAN au récap.
-    txt = recapitulatif(_saisie(mode_paiement="cheque"), resultat)
-    assert "IBAN" not in txt
-    assert "Chèque bancaire" in txt
+    assert "RIB à joindre" in txt
 
 
 def test_recap_mode_paiement(resultat):
     assert "Prélèvement automatique" in recapitulatif(
         _saisie(mode_paiement="prelevement"), resultat
     )
+    assert "Chèque bancaire" in recapitulatif(_saisie(mode_paiement="cheque"), resultat)
     assert "PAIEMENT" not in recapitulatif(_saisie(), resultat)
 
 
@@ -158,3 +148,10 @@ def test_conversion_echec_leve_conversion_impossible(tmp_path):
                               moteur="libreoffice")
     # Message non bloquant : rappelle que les .docx restent disponibles.
     assert ".docx" in str(exc.value)
+
+
+def test_recap_regime_au_bout_du_nom():
+    grille = charger_grille(RACINE / "tarifs.json")
+    res = calculer([("Menus du marché 4C", 6, "sans sel")], grille)
+    txt = recapitulatif(_saisie(lignes=[LignePrestation("Menus du marché 4C", 6, "sans sel")]), res)
+    assert "Menus du marché 4C – sans sel ×6" in txt

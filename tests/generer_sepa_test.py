@@ -39,6 +39,17 @@ def main() -> None:
     out = generer_mandat(infos, iban, bic, SORTIE / "mandat_sepa_test.docx")
     print(f"  -> {out.relative_to(RACINE)}")
 
+    # Flux nominal de l'app (demande client) : SANS coordonnées bancaires —
+    # les cases restent vides, le client joint son RIB.
+    infos_vide = InfosMandat(
+        debiteur_nom="Mme Jeanne MARTIN",
+        debiteur_adresse="12 rue des Lilas, 84100 Orange",
+        lieu_signature="Orange",
+        date_signature="07/06/2026",
+    )
+    out2 = generer_mandat(infos_vide, None, "", SORTIE / "mandat_sans_rib_test.docx")
+    print(f"  -> {out2.relative_to(RACINE)} (cases bancaires vides)")
+
     # Contrôle : un IBAN invalide doit REFUSER la génération.
     iban_casse = "FR1520041010050500013M02606"  # clé mod 97 fausse
     try:

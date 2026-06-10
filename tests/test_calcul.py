@@ -191,3 +191,14 @@ def test_sans_remise_pas_de_changement(resultat_reference):
     assert resultat_reference.remise is None
     assert resultat_reference.remise_hebdo_ttc == 0
     assert arrondi(resultat_reference.prix_public_hebdo_ttc) == Decimal("130.80")
+
+
+# --------------------------------------------------------------------------- #
+# Régime particulier (porté par la ligne, sans effet tarifaire)
+# --------------------------------------------------------------------------- #
+def test_regime_porte_par_la_ligne(grille):
+    res = calculer([("Menus du marché 4C", 6, "diabétique"), ("Menus du jour 5C", 4)], grille)
+    assert res.lignes[0].regime == "diabétique"
+    assert res.lignes[1].regime == ""
+    # aucun effet tarifaire
+    assert arrondi(res.total_hebdo_ttc) == Decimal("130.80")

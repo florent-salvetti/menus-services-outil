@@ -16,7 +16,6 @@ from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
     QDoubleSpinBox,
-    QFileDialog,
     QFrame,
     QGridLayout,
     QGroupBox,
@@ -35,7 +34,6 @@ from src.calcul import charger_grille, fmt_eur
 from src.documents.conditions import JOURS
 from src.dossier import GRILLE, SaisieDossier, calculer_saisie, generer_dossier
 from src import compteur
-from src.iban import bic_valide, formater_affichage, iban_valide, normaliser, normaliser_bic
 from src.ui.dialog_recap import DialogRecap
 from src.ui.prestations_widget import PrestationsWidget
 from src.ui.style import appliquer_ombre, construire_bandeau, feuille_qss
@@ -82,11 +80,9 @@ class MainWindow(QWidget):
         self._build_prestations()
         self._build_livraison()
         self._build_paiement()
-        self._build_banque()
         self._build_devis()
         self._build_barre(racine)
 
-        self._toggle_paiement()  # banque masquée tant que prélèvement non coché
         self._maj_apercu()
         self._maj_etat()
 
@@ -250,7 +246,7 @@ class MainWindow(QWidget):
     # --------------------------------------------------------------- paiement
     def _build_paiement(self) -> None:
         box, g = _section("Mode de paiement")
-        self.paie_prelevement = QRadioButton("Prélèvement automatique (RIB demandé)")
+        self.paie_prelevement = QRadioButton("Prélèvement automatique (autorisation générée, RIB à joindre)")
         self.paie_virement = QRadioButton("Virement bancaire")
         self.paie_cheque = QRadioButton("Chèque bancaire")
         grp = QButtonGroup(self)
@@ -276,113 +272,6 @@ class MainWindow(QWidget):
         return ""
 
     def _toggle_paiement(self) -> None:
-        """La section banque (RIB) n'apparaît que pour le prélèvement automatique."""
-        prelevement = self.paie_prelevement.isChecked()
-        self.box_banque.setVisible(prelevement)
-        if not prelevement:
-            self.iban.clear()
-            self.bic.clear()
-            self.banque_nom.clear()
-            self.banque_adresse.clear()
-        self._maj_etat()
-
-    # ----------------------------------------------------------------- banque
-    def _build_banque(self) -> None:
-        box, g = _section("Banque (mandat SEPA) — IBAN/BIC non conservés (RGPD)")
-        self.box_banque = box
-        self.banque_nom = QLineEdit()
-        self.banque_adresse = QLineEdit()
-        self.iban = QLineEdit()
-        self.iban.setPlaceholderText("FR76 ...")
-        self.bic = QLineEdit()
-        self.iban_etat = QLabel("")
-        self.bic_etat = QLabel("")
-        self.iban.textChanged.connect(self._maj_iban)
-        self.bic.textChanged.connect(self._maj_bic)
-
-        g.addWidget(QLabel("Établissement"), 0, 0)
-        g.addWidget(self.banque_nom, 0, 1)
-        g.addWidget(QLabel("Adresse banque"), 0, 2)
-        g.addWidget(self.banque_adresse, 0, 3)
-        self.bouton_rib = QPushButton("📷  Lire un RIB scanné…")
-        self.bouton_rib.setToolTip(
-            "Pré-remplit IBAN/BIC depuis un RIB (image ou PDF). "
-            "Le fichier n'est ni copié ni supprimé ; à vérifier avant usage."
-        )
-        self.bouton_rib.clicked.connect(self._lire_rib)
-
-        g.addWidget(QLabel("IBAN"), 1, 0)
-        g.addWidget(self.iban, 1, 1, 1, 2)
-        g.addWidget(self.iban_etat, 1, 3)
-        g.addWidget(QLabel("BIC"), 2, 0)
-        g.addWidget(self.bic, 2, 1)
-        g.addWidget(self.bic_etat, 2, 2, 1, 2)
-        g.addWidget(self.bouton_rib, 3, 1, 1, 3)
-        self._form.addWidget(box)
-
-    def _maj_bic(self) -> None:
-        """Indicateur ✓/✗ du BIC (NON bloquant : le mandat se génère sur l'IBAN)."""
-        txt = normaliser_bic(self.bic.text())
-        if not txt:
-            self.bic_etat.setText("")
-        elif bic_valide(txt):
-            self.bic_etat.setText("✓ BIC valide")
-            self.bic_etat.setStyleSheet("color: green;")
-        else:
-            self.bic_etat.setText("✗ BIC invalide (format/pays)")
-            self.bic_etat.setStyleSheet("color: #c0392b;")
-
-    def _lire_rib(self) -> None:
-        """Ouvre un RIB (image/PDF), pré-remplit IBAN/BIC. Validation humaine.
-
-        Le fichier source est seulement LU (en mémoire) : ni copié, ni supprimé.
-        """
-        chemin, _ = QFileDialog.getOpenFileName(
-            self, "Choisir un RIB scanné", "",
-            "RIB (*.pdf *.png *.jpg *.jpeg *.tif *.tiff *.bmp)",
-        )
-        if not chemin:
-            return
-
-        from src.ocr.rib import lire_rib  # import paresseux (Tesseract requis ici)
-
-        try:
-            res = lire_rib(chemin)
-        except FileNotFoundError as e:
-            QMessageBox.warning(self, "Tesseract introuvable", str(e))
-            return
-        except Exception as e:  # noqa: BLE001 — lecture OCR robuste
-            QMessageBox.warning(self, "Lecture du RIB impossible", str(e))
-            return
-
-        if res.iban:
-            self.iban.setText(formater_affichage(res.iban))  # déclenche ✓/✗
-        if res.bic:
-            self.bic.setText(res.bic)
-
-        if not res.iban:
-            QMessageBox.information(
-                self, "RIB lu",
-                "Aucun IBAN reconnu : saisie manuelle nécessaire.\n"
-                "(Vérifiez la qualité du scan.)",
-            )
-        elif not res.iban_valide:
-            QMessageBox.warning(
-                self, "IBAN à vérifier",
-                "IBAN reconnu mais clé mod 97 invalide → lecture probablement "
-                "imparfaite.\nComparez au RIB et corrigez avant de générer.",
-            )
-
-    def _maj_iban(self) -> None:
-        txt = normaliser(self.iban.text())
-        if not txt:
-            self.iban_etat.setText("")
-        elif iban_valide(txt):
-            self.iban_etat.setText("✓ IBAN valide")
-            self.iban_etat.setStyleSheet("color: green;")
-        else:
-            self.iban_etat.setText("✗ IBAN invalide (mod 97)")
-            self.iban_etat.setStyleSheet("color: #c0392b;")
         self._maj_etat()
 
     # ------------------------------------------------------------------ devis
@@ -481,14 +370,14 @@ class MainWindow(QWidget):
             commencement="attendre" if self.comm_attendre.isChecked() else "avant",
             date_premiere_livraison=self.date_premiere.text(),
             mode_paiement=self._mode_paiement(),
-            banque_nom=self.banque_nom.text(), banque_adresse=self.banque_adresse.text(),
-            iban=self.iban.text(), bic=self.bic.text(),
             devis_num=self.devis_num.text(), date_devis=self.date_devis.text(),
             date_validite=self.date_validite.text(), lieu=self.lieu.text(),
         )
 
     # ----------------------------------------------------------------- aperçu
     def _maj_apercu(self) -> None:
+        if not hasattr(self, "apercu"):
+            return  # barre du bas pas encore construite (appel pendant __init__)
         res = calculer_saisie(self._collecter())
         if res is None:
             self.apercu.setText("Aperçu :  —  (aucune formule saisie)")
@@ -500,6 +389,8 @@ class MainWindow(QWidget):
         )
 
     def _maj_etat(self) -> None:
+        if not hasattr(self, "bouton"):
+            return  # barre du bas pas encore construite (appel pendant __init__)
         manques = []
         if not self.nom.text().strip():
             manques.append("nom du client")
@@ -510,20 +401,15 @@ class MainWindow(QWidget):
         self.bouton.setEnabled(not manques)
         self.statut.setText("Prêt à générer." if not manques else "Manque : " + ", ".join(manques))
 
-        if self._mode_paiement() != "prelevement":
-            self.sepa_note.setText("Mandat SEPA : non requis (pas de prélèvement automatique).")
-            self.sepa_note.setStyleSheet("color: #555;")
-            return
-        iban = normaliser(self.iban.text())
-        if not iban:
-            self.sepa_note.setText("Mandat SEPA : pas d'IBAN → non généré.")
-            self.sepa_note.setStyleSheet("color: #555;")
-        elif iban_valide(iban):
-            self.sepa_note.setText("Mandat SEPA : IBAN valide ✓ → sera généré.")
+        if self._mode_paiement() == "prelevement":
+            self.sepa_note.setText(
+                "Autorisation de prélèvement : sera générée (coordonnées bancaires "
+                "non saisies — le client joint son RIB)."
+            )
             self.sepa_note.setStyleSheet("color: green;")
         else:
-            self.sepa_note.setText("Mandat SEPA : IBAN invalide ✗ → non généré.")
-            self.sepa_note.setStyleSheet("color: #c0392b;")
+            self.sepa_note.setText("Autorisation de prélèvement : non requise.")
+            self.sepa_note.setStyleSheet("color: #555;")
 
     # -------------------------------------------------------------- génération
     def _generer(self) -> None:

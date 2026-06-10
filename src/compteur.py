@@ -1,10 +1,13 @@
-"""Compteur local de numéros de devis (auto-incrément par année).
+"""Compteur local de numéros de devis (auto-incrément PAR JOUR).
 
-Stocké dans donnees/compteur_devis.json : { "dernier": { "2026": 3 } }.
+Format demandé par le client : « JJMMAAAA-N » (ex. 10062026-1 = 1er devis du
+10/06/2026). Stocké dans donnees/compteur_devis.json :
+  { "dernier_jour": { "10062026": 2 } }
 - `numero_propose` retourne le PROCHAIN numéro sans le consommer (pré-remplissage UI).
 - `enregistrer_numero` marque un numéro comme utilisé (après génération réussie).
 
-Aucune donnée bénéficiaire ici — uniquement des compteurs.
+Aucune donnée bénéficiaire ici — uniquement des compteurs. Les anciennes clés
+(« dernier » par année) sont ignorées sans erreur.
 """
 
 from __future__ import annotations
@@ -22,7 +25,7 @@ def _charger() -> dict:
     try:
         return json.loads(_FICHIER.read_text(encoding="utf-8-sig"))
     except (FileNotFoundError, json.JSONDecodeError):
-        return {"dernier": {}}
+        return {}
 
 
 def _sauver(data: dict) -> None:
@@ -30,24 +33,25 @@ def _sauver(data: dict) -> None:
     _FICHIER.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
-def _dernier(annee: int, data: dict) -> int:
-    return int(data.get("dernier", {}).get(str(annee), 0))
+def _dernier(jour: str, data: dict) -> int:
+    return int(data.get("dernier_jour", {}).get(jour, 0))
 
 
-def numero_propose(annee: int | None = None) -> str:
-    """Prochain numéro proposé (ex. « 2026-0004 ») — NE consomme pas."""
-    annee = annee or date.today().year
-    return f"{annee}-{_dernier(annee, _charger()) + 1:04d}"
+def numero_propose(jour: date | None = None) -> str:
+    """Prochain numéro proposé (ex. « 10062026-1 ») — NE consomme pas."""
+    jour = jour or date.today()
+    cle = jour.strftime("%d%m%Y")
+    return f"{cle}-{_dernier(cle, _charger()) + 1}"
 
 
 def enregistrer_numero(numero: str) -> None:
-    """Marque `numero` (« AAAA-NNNN ») comme utilisé (met à jour le compteur)."""
-    m = re.match(r"(\d{4})-(\d+)", numero.strip())
+    """Marque `numero` (« JJMMAAAA-N ») comme utilisé (met à jour le compteur)."""
+    m = re.match(r"(\d{8})-(\d+)$", numero.strip())
     if not m:
         return
-    annee, n = int(m.group(1)), int(m.group(2))
+    cle, n = m.group(1), int(m.group(2))
     data = _charger()
-    data.setdefault("dernier", {})
-    if n > _dernier(annee, data):
-        data["dernier"][str(annee)] = n
+    data.setdefault("dernier_jour", {})
+    if n > _dernier(cle, data):
+        data["dernier_jour"][cle] = n
         _sauver(data)

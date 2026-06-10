@@ -36,6 +36,7 @@ TEMPLATE_GENERE = RACINE / "modeles" / "_template_devis.docx"  # copie balisée
 #: Le label reprend EXACTEMENT le texte de la trame (hors pointillés), suivi
 #: de la/les balise(s). Les « € » / « Euros HT » de la trame sont préservés.
 _PARA_REMPLACEMENTS = {
+    1:  "{{ civilite }}",   # « Monsieur / Madame » figé -> civilité réelle
     2:  "{{ client_nom }}",
     3:  "{{ client_adresse }}",
     4:  "Devis N° {{ devis_num }}",
@@ -147,6 +148,7 @@ def construire_template(
 class InfosDevis:
     """Champs non tarifaires du devis (alimentés par l'UI plus tard)."""
 
+    civilite: str = ""        # « Monsieur » ou « Madame »
     client_nom: str = ""
     client_adresse: str = ""
     devis_num: str = ""
@@ -165,11 +167,43 @@ def _detail_repas(resultat: Resultat) -> str:
     return f"{resultat.nb_repas_total} repas"
 
 
+def _nom_ligne(ligne) -> str:
+    """Nom de la prestation, suivi du régime particulier le cas échéant."""
+    if ligne.regime.strip():
+        return f"{ligne.formule.nom} – {ligne.regime.strip()}"
+    return ligne.formule.nom
+
+
 def _detail_formules(resultat: Resultat) -> str:
-    """« Menus du marché 4C (×6) + Menus du jour 5C (×4) »."""
+    """« Menus du marché 4C – diabétique (×6) + Menus du jour 5C (×4) »."""
     return " + ".join(
-        f"{l.formule.nom} (×{l.quantite})" for l in resultat.lignes
+        f"{_nom_ligne(l)} (×{l.quantite})" for l in resultat.lignes
     )
+
+
+def _join_unitaires(valeurs) -> str:
+    """Joint des montants UNITAIRES par « / » (un par formule), « — » si aucun."""
+    textes = [fmt_num(v) for v in valeurs if v is not None]
+    return " / ".join(textes) if textes else "—"
+
+
+def tarifs_unitaires(resultat: Resultat) -> dict:
+    """Tarifs AU REPAS (unitaires, prix catalogue) pour devis et CPV.
+
+    Demande client : les lignes « Tarif de la formule », « dont Prix du
+    repas » et « dont prix du Service » affichent le tarif d'UN repas, pas le
+    total hebdomadaire. Multi-formules : un montant par formule, séparés par
+    « / », dans l'ordre de la ligne « Formule choisie ».
+    """
+    lignes = resultat.lignes
+    return {
+        "tarif_ttc": _join_unitaires(l.formule.ttc for l in lignes),
+        "tarif_ht": _join_unitaires(l.formule.ht for l in lignes),
+        "repas_ttc": _join_unitaires(l.formule.repas_ttc for l in lignes),
+        "repas_ht": _join_unitaires(l.formule.repas_ht for l in lignes),
+        "service_ttc": _join_unitaires(l.formule.service_ttc for l in lignes),
+        "service_ht": _join_unitaires(l.formule.service_ht for l in lignes),
+    }
 
 
 def _detail_remise(resultat: Resultat) -> str:
@@ -200,6 +234,7 @@ def contexte_devis(resultat: Resultat, infos: InfosDevis) -> dict:
 
     return {
         # champs non tarifaires
+        "civilite": infos.civilite or "Monsieur / Madame",
         "client_nom": infos.client_nom,
         "client_adresse": infos.client_adresse,
         "devis_num": infos.devis_num,
@@ -212,13 +247,9 @@ def contexte_devis(resultat: Resultat, infos: InfosDevis) -> dict:
         "formule_detail": _detail_formules(resultat),
         # remise commerciale (ligne masquée si vide)
         "remise_detail": _detail_remise(resultat),
-        # totaux consolidés (nombres seuls, la trame porte « € » / « Euros HT »)
-        "tarif_ttc": fmt_num(resultat.total_hebdo_ttc),
-        "tarif_ht": fmt_num(resultat.total_hebdo_ht),
-        "repas_ttc": fmt_num(resultat.total_repas_ttc),
-        "repas_ht": fmt_num(resultat.total_repas_ht),
-        "service_ttc": fmt_num(resultat.total_service_ttc),
-        "service_ht": fmt_num(resultat.total_service_ht),
+        # tarifs AU REPAS (unitaires — demande client), un montant par formule
+        **tarifs_unitaires(resultat),
+        # totaux hebdo / mensuels consolidés (après remise éventuelle)
         "hebdo_ttc": fmt_num(resultat.total_hebdo_ttc),
         "mensuel_ttc": fmt_num(resultat.cout_mensuel_ttc),
         "reste_a_charge": fmt_num(resultat.total_apres_ci),

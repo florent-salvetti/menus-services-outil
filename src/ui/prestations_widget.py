@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
+    QCheckBox,
     QComboBox,
     QHBoxLayout,
     QLabel,
@@ -16,8 +17,13 @@ from PySide6.QtWidgets import (
 from src.dossier import LignePrestation
 
 
+#: Régimes particuliers proposés (sans incidence tarifaire). Le libellé est
+#: reporté tel quel au bout du nom de la prestation sur devis + conditions.
+REGIMES = ["diabétique", "sans sel", "mixé"]
+
+
 class _LigneWidget(QWidget):
-    """Une ligne : formule (liste déroulante) + nb repas/sem + supprimer."""
+    """Une ligne : formule + nb repas/sem + régime particulier + supprimer."""
 
     modifie = Signal()
     supprimee = Signal(object)
@@ -37,6 +43,15 @@ class _LigneWidget(QWidget):
         self.spin.setValue(0)
         self.spin.valueChanged.connect(self.modifie)
 
+        # Régime particulier : case + choix (actif uniquement si cochée).
+        self.regime_actif = QCheckBox("Régime")
+        self.regime_actif.setToolTip("Régime particulier, indiqué au bout du nom de la prestation")
+        self.regime_actif.stateChanged.connect(self._toggle_regime)
+        self.regime = QComboBox()
+        self.regime.addItems(REGIMES)
+        self.regime.setEnabled(False)
+        self.regime.currentIndexChanged.connect(self.modifie)
+
         btn = QPushButton("✕")
         btn.setObjectName("boutonSuppr")
         btn.setFixedSize(28, 28)
@@ -49,10 +64,17 @@ class _LigneWidget(QWidget):
         lay.addWidget(QLabel("×"))
         lay.addWidget(self.spin)
         lay.addWidget(QLabel("repas/sem."))
+        lay.addWidget(self.regime_actif)
+        lay.addWidget(self.regime)
         lay.addWidget(btn)
 
+    def _toggle_regime(self) -> None:
+        self.regime.setEnabled(self.regime_actif.isChecked())
+        self.modifie.emit()
+
     def ligne(self) -> LignePrestation:
-        return LignePrestation(self.combo.currentText(), self.spin.value())
+        regime = self.regime.currentText() if self.regime_actif.isChecked() else ""
+        return LignePrestation(self.combo.currentText(), self.spin.value(), regime=regime)
 
 
 class PrestationsWidget(QWidget):

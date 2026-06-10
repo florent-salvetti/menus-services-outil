@@ -91,20 +91,25 @@ Source : `TArifs_2026.xlsx`, feuille « Tarifs 26 », tarifs au 01/01/2026. 29 l
 
 **Règle de remplissage :** garder la trame telle quelle. Le moteur calcule **ligne par ligne** en interne, puis écrit dans chaque champ existant le **résultat consolidé**, en faisant apparaître le détail des formules sur les deux premières lignes.
 
-Rendu attendu pour l'exemple ci-dessus :
+Rendu attendu pour l'exemple ci-dessus (**révision client 10/06/2026 : les
+lignes « Tarif de la formule » et « dont … » affichent le tarif d'UN repas**,
+un montant par formule séparé par « / », PAS le total hebdomadaire) :
 
 ```
 Nombre de repas par semaine : 6 + 4 = 10 repas
 Formule choisie : Menus du marché 4C (×6) + Menus du jour 5C (×4)
-Tarif de la formule de repas choisie : 130,80 € TTC (118,91 € HT)
-   - dont Prix du repas : 65,91 € TTC (TVA 10% — 59,92 € HT)
-   - dont prix du Service de livraison : 64,89 € TTC (TVA 10% — 58,99 € HT)
-Devis pour 1 semaine : 130,80 € TTC
+Tarif de la formule de repas choisie : 12,80 / 13,50 € TTC (11,64 / 12,27 Euros HT)
+   - dont Prix du repas : 6,42 / 6,84 € TTC (TVA 10% — 5,84 / 6,22 Euros HT)
+   - dont prix du Service de livraison : 6,38 / 6,66 € TTC (TVA 10% — 5,80 / 6,05 Euros HT)
+Devis pour 1 semaine : 130,80 € TTC          ← totaux hebdo/mensuels consolidés
 Coût mensuel moyen : 566,80 € TTC (130,80 × 52/12)
-Total après crédit d'impôt : 283,40 €
+Total après crédit d'impôt : (reste à charge, cf. §7)
 ```
 
-Les lignes de tarif portent le **total consolidé** ; le détail des formules apparaît uniquement sur « Nombre de repas » et « Formule choisie ».
+Les tarifs unitaires sont les prix CATALOGUE (la remise éventuelle n'apparaît
+que sur sa ligne dédiée et sur les totaux). Si une ligne porte un **régime
+particulier** (diabétique, sans sel, mixé), il s'affiche au bout du nom :
+« Menus du marché 4C – diabétique (×6) ».
 
 ---
 
@@ -168,6 +173,8 @@ Le crédit d'impôt de 50 % porte **UNIQUEMENT sur la part « service de livrais
 
 **Prestations — liste de lignes (1 à N)**
 - Par ligne : Formule (liste déroulante depuis la grille) + Nb de repas / semaine
+  + case « Régime » (diabétique / sans sel / mixé) sans incidence tarifaire,
+  reporté au bout du nom de la prestation sur devis + conditions
 - Bouton « ajouter une formule »
 
 **Modalités de livraison**
@@ -178,8 +185,10 @@ Le crédit d'impôt de 50 % porte **UNIQUEMENT sur la part « service de livrais
 
 **Mode de paiement** (obligatoire — coche la bonne case des Conditions)
 - Prélèvement automatique / Virement bancaire / Chèque bancaire
-- La section RIB/IBAN n'apparaît QUE pour « Prélèvement automatique », et le
-  **mandat SEPA n'est généré que dans ce cas** (sinon : pas de mandat, pas d'alerte).
+- **Révision client 10/06/2026 : AUCUNE coordonnée bancaire n'est saisie.**
+  Si « Prélèvement automatique » → l'autorisation de prélèvement est générée
+  avec les cases bancaires VIDES (le client joint son RIB, comme l'indique la
+  trame). Pas de saisie IBAN/BIC, pas d'OCR de RIB. Sinon : pas de mandat.
 
 **Réduction commerciale (devis)**
 - Case « Appliquer une réduction » + valeur en **%** ou en **€ TTC/semaine**.
@@ -188,13 +197,16 @@ Le crédit d'impôt de 50 % porte **UNIQUEMENT sur la part « service de livrais
 - Le devis affiche une ligne « Remise commerciale : … (prix public : …) » ;
   les montants imprimés (devis ET conditions) sont les montants APRÈS remise.
 
-**Coordonnées bancaires (mandat SEPA)**
-- Nom/adresse du débiteur (= client en général)
-- Nom + adresse de l'établissement bancaire
-- IBAN + BIC → **pré-remplis par OCR du RIB scanné**, avec **validation visuelle obligatoire** par l'utilisateur avant génération (une erreur d'IBAN = prélèvement rejeté). **Non stockés après génération** (cf. §9).
+**Coordonnées bancaires — SUPPRIMÉES du flux (révision client 10/06/2026)**
+- L'autorisation de prélèvement sort avec débiteur/date/lieu remplis et les
+  cases bancaires vides. Le module OCR (`src/ocr/`) et `src/iban.py` restent
+  dans le code (testés) mais ne sont plus branchés à l'UI. Le §9 ci-dessous
+  est conservé à titre historique au cas où la saisie bancaire reviendrait.
 
 **Métadonnées devis**
-- N° de devis (auto-incrément local), date du devis, date de validité, lieu (« Fait à … »)
+- N° de devis **« JJMMAAAA-N »** (ex. `10062026-1` = 1er devis du 10/06/2026),
+  auto-incrément local PAR JOUR (`donnees/compteur_devis.json`), date du devis,
+  date de validité, lieu (« Fait à … »)
 
 ---
 

@@ -30,13 +30,14 @@ from typing import Optional
 
 from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
-from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
-from docx.text.paragraph import Paragraph
 from docxtpl import DocxTemplate
 
-from src.calcul import Resultat, fmt_num
-from src.documents.devis import _detail_formules  # même rendu « formule » que le devis
+from src.calcul import Resultat
+from src.documents.devis import (  # mêmes rendus « formule » / tarifs que le devis
+    _detail_formules,
+    tarifs_unitaires,
+)
 
 from src.chemins import RACINE
 _MODELES = {
@@ -128,37 +129,6 @@ _REGLES = [
 ]
 
 
-def _inserer_paragraphe(ancre, texte: str, *, avant: bool):
-    """Insère un paragraphe (texte brut) juste avant/après `ancre`."""
-    p = OxmlElement("w:p")
-    if avant:
-        ancre._p.addprevious(p)
-    else:
-        ancre._p.addnext(p)
-    para = Paragraph(p, ancre._parent)
-    para.add_run(texte)
-    return para
-
-
-def _rendre_beneficiaire_conditionnel(doc) -> None:
-    """Entoure les lignes d'identité du bénéficiaire (Nom/Prénom + Adresse) de
-    `{%p if benef_present %}` / `{%p endif %}`.
-
-    Quand le bénéficiaire est identique au client, ces lignes DISPARAISSENT
-    (cohérent avec le devis) : pas de répétition de l'identité client. L'en-tête
-    de section « Identité et coordonnées du bénéficiaire » est conservé.
-    """
-    debut = fin = None
-    for p in doc.paragraphs:
-        if "{{ benef_nom }}" in p.text:
-            debut = p
-        elif "{{ benef_adresse }}" in p.text:
-            fin = p
-    if debut is not None and fin is not None:
-        _inserer_paragraphe(debut, "{%p if benef_present %}", avant=True)
-        _inserer_paragraphe(fin, "{%p endif %}", avant=False)
-
-
 #: Marqueur mc:AlternateContent (formes dessinées avec repli image/VML).
 _MC_ALTERNATE = "{http://schemas.openxmlformats.org/markup-compatibility/2006}AlternateContent"
 
@@ -234,25 +204,22 @@ def _baliser_tutelle(doc) -> None:
             return
 
 
-def _rendre_lieu_conditionnel(doc) -> None:
-    """Remplit la valeur du lieu et entoure le bloc (libellé + valeur) de
-    `{%p if lieu_prestation %}` / `{%p endif %}` : tout disparaît si vide.
+def _baliser_lieu(doc) -> None:
+    """Balise la ligne de valeur sous « Adresse de la réalisation… » (Article 2).
+
+    Le bloc reste TOUJOURS présent : le rendre conditionnel supprimait
+    l'Article 2 entier et décalait la numérotation automatique de tous les
+    articles suivants (retour client). Le rendu garde des pointillés si aucun
+    lieu distinct n'est saisi, comme la trame vierge.
     """
     paras = doc.paragraphs
     for i, p in enumerate(paras):
         if p.text.strip().startswith("Adresse de la réalisation"):
-            libelle = p
             valeur = paras[i + 1] if i + 1 < len(paras) else None
             if valeur is not None and "…" in valeur.text:
-                _ecrire_paragraphe(valeur, "{{ lieu_prestation }}")
-                fin = valeur
+                _ecrire_paragraphe(valeur, "{{ lieu_prestation_aff }}")
             else:
-                # Pas de ligne de pointillés séparée : on ajoute la valeur au
-                # libellé et on borne le conditionnel sur ce seul paragraphe.
-                libelle.runs[0].text = libelle.runs[0].text.rstrip() + " : {{ lieu_prestation }}"
-                fin = libelle
-            _inserer_paragraphe(libelle, "{%p if lieu_prestation %}", avant=True)
-            _inserer_paragraphe(fin, "{%p endif %}", avant=False)
+                p.runs[0].text = p.runs[0].text.rstrip() + " : {{ lieu_prestation_aff }}"
             return
 
 
@@ -293,13 +260,10 @@ def construire_template(tournee: str) -> Path:
                 p.runs[0].text = "{{ marque_avant }}   " + p.runs[0].text
                 _supprimer_puce(p)
 
-    # --- Lieu de prestation (libellé + ligne de pointillés) -----------------
-    # Info ISOLÉE (section « Identité du bénéficiaire »), pas une clause
-    # numérotée → on rend le bloc entier conditionnel : il disparaît si le lieu
-    # est vide (= identique à l'adresse client). Le libellé réglementaire (avec
-    # sa coquille « l'adresser ») n'est PAS modifié.
-    _rendre_lieu_conditionnel(doc)
-    _rendre_beneficiaire_conditionnel(doc)
+    # --- Lieu de prestation (Article 2, toujours présent) --------------------
+    # Le libellé réglementaire (avec sa coquille « l'adresser ») n'est PAS
+    # modifié ; seule la ligne de pointillés sous le titre est balisée.
+    _baliser_lieu(doc)
     _baliser_paiement(doc)
     _baliser_tutelle(doc)
 
@@ -345,13 +309,8 @@ def construire_template(tournee: str) -> Path:
 def contexte_conditions(infos: InfosConditions, resultat: Resultat) -> dict:
     """Construit le contexte docxtpl. Valeurs tarifaires = celles du devis."""
     selection = {_cle_jour(j) for j in infos.jours_repas}
-    # Présence d'un bénéficiaire distinct : sinon le bloc identité est masqué.
-    benef_present = "X" if (
-        infos.benef_nom.strip() or infos.benef_prenom.strip() or infos.benef_adresse.strip()
-    ) else ""
     ctx = {
-        "benef_present": benef_present,
-        # identité
+        # identité (Article 1 TOUJOURS rempli — identité client si identique)
         "client_nom": infos.client_nom,
         "client_adresse": infos.client_adresse,
         "benef_nom": infos.benef_nom,
@@ -359,7 +318,9 @@ def contexte_conditions(infos: InfosConditions, resultat: Resultat) -> dict:
         "benef_adresse": infos.benef_adresse,
         # bloc tutelle officiel : pointillés conservés si pas de tuteur
         "tuteur_detail": infos.tuteur.strip() or "……",
-        "lieu_prestation": infos.lieu_prestation,
+        # Article 2 : pointillés conservés si pas de lieu distinct
+        "lieu_prestation_aff": infos.lieu_prestation.strip()
+        or "……………………………………………………………………………………",
         # commencement (marque « X » sur l'option choisie)
         "marque_attendre": "X" if infos.commencement == "attendre" else "",
         "marque_avant": "X" if infos.commencement == "avant" else "",
@@ -368,14 +329,9 @@ def contexte_conditions(infos: InfosConditions, resultat: Resultat) -> dict:
         "marque_prelevement": "X" if infos.mode_paiement == "prelevement" else "",
         "marque_virement": "X" if infos.mode_paiement == "virement" else "",
         "marque_cheque": "X" if infos.mode_paiement == "cheque" else "",
-        # coût : RÉINJECTION des valeurs du moteur (identiques au devis)
+        # coût : MÊMES tarifs AU REPAS (unitaires) que le devis
         "formule_detail": _detail_formules(resultat),
-        "tarif_ttc": fmt_num(resultat.total_hebdo_ttc),
-        "tarif_ht": fmt_num(resultat.total_hebdo_ht),
-        "repas_ttc": fmt_num(resultat.total_repas_ttc),
-        "repas_ht": fmt_num(resultat.total_repas_ht),
-        "service_ttc": fmt_num(resultat.total_service_ttc),
-        "service_ht": fmt_num(resultat.total_service_ht),
+        **tarifs_unitaires(resultat),
         # « Fait à … le … »
         "lieu": infos.lieu,
         "date": infos.date,

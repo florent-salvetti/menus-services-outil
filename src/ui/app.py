@@ -28,7 +28,6 @@ def _selftest() -> int:
     from src.chemins import RACINE
     from src import licence
     from src.dossier import LignePrestation, SaisieDossier, generer_dossier
-    from src.iban import generer_iban_fr
 
     print(f"RACINE (résolue) : {RACINE}")
     print(f"frozen           : {getattr(sys, 'frozen', False)}")
@@ -47,10 +46,8 @@ def _selftest() -> int:
         benef_identique=True,
         lignes=[LignePrestation("Menus du marché 4C", 6), LignePrestation("Menus du jour 5C", 4)],
         tournee="T1", jours_repas=["Lundi", "Jeudi"], commencement="attendre",
-        mode_paiement="prelevement",  # requis pour générer le mandat SEPA
-        banque_nom="BNP Paribas", banque_adresse="Orange",
-        iban=generer_iban_fr("30004", "00001", "00001234567"), bic="BNPAFRPPXXX",
-        devis_num="TEST-0001", date_devis="07/06/2026", date_validite="07/07/2026", lieu="Orange",
+        mode_paiement="prelevement",  # requis pour générer l'autorisation de prélèvement
+        devis_num="10062026-1", date_devis="07/06/2026", date_validite="07/07/2026", lieu="Orange",
     )
     g = generer_dossier(saisie)
     print(f"Dossier généré   : {g.dossier}")

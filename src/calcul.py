@@ -90,6 +90,7 @@ class LigneCalcul:
 
     formule: Formule
     quantite: int  # nb de repas / semaine (ou quantité hebdo pour un service)
+    regime: str = ""  # régime particulier ("diabétique", "sans sel", "mixé") — sans effet tarifaire
 
     # totaux hebdomadaires de la ligne
     total_ttc: Decimal = field(init=False)
@@ -191,16 +192,21 @@ def calculer(
     avertissements: list[str] = []
 
     for item in saisie:
+        regime = ""
         if isinstance(item, dict):
             nom = item["formule"]
             quantite = int(item.get("nb_repas_semaine", item.get("quantite")))
+            regime = item.get("regime", "")
+        elif len(item) == 3:
+            nom, quantite, regime = item
+            quantite = int(quantite)
         else:
             nom, quantite = item
             quantite = int(quantite)
 
         if nom not in grille:
             raise KeyError(f"Formule absente de la grille tarifaire : {nom!r}")
-        lignes.append(LigneCalcul(grille[nom], quantite))
+        lignes.append(LigneCalcul(grille[nom], quantite, regime=regime))
 
     z = Decimal(0)
     total_hebdo_ttc = sum((l.total_ttc for l in lignes), z)
