@@ -158,9 +158,20 @@ class InfosDevis:
     lieu_prestation: str = ""
 
 
+def _lignes_repas(resultat: Resultat) -> list:
+    """Lignes qui sont de VRAIS repas (cf. catégorie de la grille).
+
+    Suppléments (Potage, garniture, PQS, Pain…) et services (Ménage,
+    Téléassistance…) sont exclus du décompte et de la liste « Formule
+    choisie » : leur montant reste fondu dans les totaux du devis, mais ils
+    n'apparaissent pas comme des repas (demande client 10/06/2026).
+    """
+    return [l for l in resultat.lignes if l.formule.est_repas]
+
+
 def _detail_repas(resultat: Resultat) -> str:
     """« 6 + 4 = 10 repas » (multi) ou « 6 repas » (mono)."""
-    quantites = [l.quantite for l in resultat.lignes]
+    quantites = [l.quantite for l in _lignes_repas(resultat)]
     if len(quantites) > 1:
         somme = " + ".join(str(q) for q in quantites)
         return f"{somme} = {resultat.nb_repas_total} repas"
@@ -175,9 +186,12 @@ def _nom_ligne(ligne) -> str:
 
 
 def _detail_formules(resultat: Resultat) -> str:
-    """« Menus du marché 4C – diabétique (×6) + Menus du jour 5C (×4) »."""
+    """« Menus du marché 4C – diabétique (×6) + Menus du jour 5C (×4) ».
+
+    Seuls les vrais repas sont listés (suppléments/services masqués ici).
+    """
     return " + ".join(
-        f"{_nom_ligne(l)} (×{l.quantite})" for l in resultat.lignes
+        f"{_nom_ligne(l)} (×{l.quantite})" for l in _lignes_repas(resultat)
     )
 
 
@@ -195,7 +209,7 @@ def tarifs_unitaires(resultat: Resultat) -> dict:
     total hebdomadaire. Multi-formules : un montant par formule, séparés par
     « / », dans l'ordre de la ligne « Formule choisie ».
     """
-    lignes = resultat.lignes
+    lignes = _lignes_repas(resultat)  # alignées sur « Formule choisie »
     return {
         "tarif_ttc": _join_unitaires(l.formule.ttc for l in lignes),
         "tarif_ht": _join_unitaires(l.formule.ht for l in lignes),

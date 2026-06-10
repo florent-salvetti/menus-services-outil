@@ -49,7 +49,7 @@ class _LigneWidget(QWidget):
         self.regime_actif.stateChanged.connect(self._toggle_regime)
         self.regime = QComboBox()
         self.regime.addItems(REGIMES)
-        self.regime.setEnabled(False)
+        self.regime.setVisible(False)  # masqué tant que la case n'est pas cochée
         self.regime.currentIndexChanged.connect(self.modifie)
 
         btn = QPushButton("✕")
@@ -69,7 +69,7 @@ class _LigneWidget(QWidget):
         lay.addWidget(btn)
 
     def _toggle_regime(self) -> None:
-        self.regime.setEnabled(self.regime_actif.isChecked())
+        self.regime.setVisible(self.regime_actif.isChecked())
         self.modifie.emit()
 
     def ligne(self) -> LignePrestation:

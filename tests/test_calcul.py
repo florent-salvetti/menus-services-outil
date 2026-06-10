@@ -133,6 +133,33 @@ def test_menage_eligible_sans_avertissement(grille):
 
 
 # --------------------------------------------------------------------------- #
+# Catégorie repas / supplément / service : seuls les repas sont COMPTÉS
+# comme repas, mais TOUT reste dans les totaux du devis (demande client).
+# --------------------------------------------------------------------------- #
+def test_supplements_et_services_ne_comptent_pas_en_repas(grille):
+    res = calculer(
+        [
+            ("Menus du marché 4C", 6),       # repas
+            ("Supplement : garniture", 6),   # supplément
+            ("Ménage", 2),                   # service
+        ],
+        grille,
+    )
+    # 6 seulement (pas 6 + 6 + 2 = 14).
+    assert res.nb_repas_total == 6
+    # Mais leur montant reste fondu dans le total : 6×12,80 + 6×2,60 + 2×30.
+    attendu = Decimal("12.80") * 6 + Decimal("2.60") * 6 + Decimal("30") * 2
+    assert arrondi(res.total_hebdo_ttc) == arrondi(attendu)
+
+
+def test_categorie_par_defaut_est_repas(grille):
+    # Compat. ascendante : une formule sans `categorie` est traitée en repas.
+    assert grille["Menus du marché 4C"].est_repas is True
+    assert grille["Supplement : garniture"].est_repas is False
+    assert grille["Ménage"].est_repas is False
+
+
+# --------------------------------------------------------------------------- #
 # Cas mono-formule
 # --------------------------------------------------------------------------- #
 def test_mono_formule(grille):

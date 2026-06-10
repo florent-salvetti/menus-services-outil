@@ -35,6 +35,8 @@ BLANC = "#FFFFFF"
 
 LOGO = RACINE / "assets" / "logo.png"
 CHEVRON = RACINE / "assets" / "chevron_bas.png"
+PLUS = RACINE / "assets" / "plus.png"
+MINUS = RACINE / "assets" / "minus.png"
 
 
 def feuille_qss() -> str:
@@ -72,7 +74,7 @@ def feuille_qss() -> str:
     QLabel {{ background: transparent; color: {LABEL}; }}
 
     /* Champs de saisie */
-    QLineEdit, QComboBox, QSpinBox {{
+    QLineEdit, QComboBox, QSpinBox, QDoubleSpinBox {{
         background-color: {BLANC};
         border: 1px solid {BORDURE};
         border-radius: 9px;
@@ -81,8 +83,39 @@ def feuille_qss() -> str:
         selection-background-color: {VERT};
         selection-color: {BLANC};
     }}
-    QLineEdit:focus, QComboBox:focus, QSpinBox:focus {{ border: 2px solid {VERT}; }}
-    QLineEdit:hover, QComboBox:hover, QSpinBox:hover {{ border: 1px solid {VERT_FONCE}; }}
+    QLineEdit:focus, QComboBox:focus, QSpinBox:focus, QDoubleSpinBox:focus {{ border: 2px solid {VERT}; }}
+    QLineEdit:hover, QComboBox:hover, QSpinBox:hover, QDoubleSpinBox:hover {{ border: 1px solid {VERT_FONCE}; }}
+
+    /* Boutons +/- des compteurs : zone cliquable nette, séparée du champ */
+    QSpinBox, QDoubleSpinBox {{ padding-right: 26px; }}
+    QSpinBox::up-button, QDoubleSpinBox::up-button {{
+        subcontrol-origin: border;
+        subcontrol-position: top right;
+        width: 24px;
+        border-left: 1px solid {BORDURE};
+        border-bottom: 1px solid {BORDURE};
+        border-top-right-radius: 9px;
+        background-color: {VERT_PALE};
+    }}
+    QSpinBox::down-button, QDoubleSpinBox::down-button {{
+        subcontrol-origin: border;
+        subcontrol-position: bottom right;
+        width: 24px;
+        border-left: 1px solid {BORDURE};
+        border-bottom-right-radius: 9px;
+        background-color: {VERT_PALE};
+    }}
+    QSpinBox::up-button:hover, QDoubleSpinBox::up-button:hover,
+    QSpinBox::down-button:hover, QDoubleSpinBox::down-button:hover {{ background-color: {VERT}; }}
+    QSpinBox::up-button:pressed, QDoubleSpinBox::up-button:pressed,
+    QSpinBox::down-button:pressed, QDoubleSpinBox::down-button:pressed {{ background-color: {VERT_FONCE}; }}
+    QSpinBox::up-arrow, QDoubleSpinBox::up-arrow {{
+        image: url("{PLUS.as_posix()}"); width: 11px; height: 11px;
+    }}
+    QSpinBox::down-arrow, QDoubleSpinBox::down-arrow {{
+        image: url("{MINUS.as_posix()}"); width: 11px; height: 11px;
+    }}
+
     QComboBox::drop-down {{
         subcontrol-origin: padding;
         subcontrol-position: center right;

@@ -59,6 +59,19 @@ class Formule:
     service_ht: Optional[Decimal]
     repas_ttc: Optional[Decimal]
     repas_ht: Optional[Decimal]
+    categorie: str = "repas"  # "repas" | "supplement" | "service" (cf. tarifs.json)
+
+    @property
+    def est_repas(self) -> bool:
+        """Vrai si c'est un vrai repas (compté dans « Nombre de repas »).
+
+        Les suppléments (Potage, garniture, PQS, Pain…) et les prestations de
+        service (Ménage, Téléassistance…) NE sont PAS des repas : ils restent
+        dans les totaux du devis mais ne sont ni comptés ni listés comme repas
+        (demande client). Une formule sans `categorie` est traitée en repas
+        (compat. ascendante des anciennes grilles).
+        """
+        return self.categorie == "repas"
 
     @property
     def ventilable(self) -> bool:
@@ -81,6 +94,7 @@ class Formule:
             service_ht=_to_dec(d.get("service_ht")),
             repas_ttc=_to_dec(d.get("repas_ttc")),
             repas_ht=_to_dec(d.get("repas_ht")),
+            categorie=d.get("categorie", "repas"),
         )
 
 
@@ -281,7 +295,7 @@ def calculer(
         cout_mensuel_ttc=cout_mensuel_ttc,
         credit_impot_mensuel=credit_impot_mensuel,
         total_apres_ci=total_apres_ci,
-        nb_repas_total=sum(l.quantite for l in lignes),
+        nb_repas_total=sum(l.quantite for l in lignes if l.formule.est_repas),
         avertissements=avertissements,
         remise=remise if remise_hebdo_ttc > 0 else None,
         remise_hebdo_ttc=remise_hebdo_ttc,

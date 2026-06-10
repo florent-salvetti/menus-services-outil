@@ -314,8 +314,8 @@ class MainWindow(QWidget):
 
     def _toggle_remise(self) -> None:
         actif = self.remise_active.isChecked()
-        self.remise_valeur.setEnabled(actif)
-        self.remise_unite.setEnabled(actif)
+        self.remise_valeur.setVisible(actif)  # masqué tant que la case n'est pas cochée
+        self.remise_unite.setVisible(actif)
         if not actif:
             self.remise_valeur.setValue(0.0)
         self._maj_apercu()
