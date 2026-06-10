@@ -3,7 +3,9 @@
 #
 # 1) construit l'exe avec PyInstaller (--onedir via le .spec)
 # 2) copie les DONNÉES à côté de l'exe (modeles/, tarifs.json, config.example.json)
-# 3) copie tesseract/ et libreoffice/ s'ils sont présents (binaires embarqués)
+# 3) copie libreoffice/ s'il est présent (binaire embarqué optionnel).
+#    tesseract/ n'est PLUS livré : l'OCR du RIB est débranché de l'UI depuis
+#    la révision client du 10/06/2026 (aucune coordonnée bancaire saisie).
 # 4) compresse le tout en dist\MenusServices.zip (livraison), SANS les fichiers
 #    de dev (config.json, licences.dev.json) ni les artefacts locaux
 # Résultat : dist\MenusServices\  = le dossier à copier sur le PC de Michaël,
@@ -27,10 +29,11 @@ Copy-Item (Join-Path $racine "modeles")            (Join-Path $dist "modeles") -
 Remove-Item (Join-Path $dist "modeles\_template_*.docx") -Force -ErrorAction SilentlyContinue
 Copy-Item (Join-Path $racine "assets")             (Join-Path $dist "assets") -Recurse -Force
 Copy-Item (Join-Path $racine "tarifs.json")        $dist -Force
+Copy-Item (Join-Path $racine "regimes.json")       $dist -Force
 Copy-Item (Join-Path $racine "config.example.json") $dist -Force
 
 Write-Host "== 3. Binaires embarques (si presents) ==" -ForegroundColor Cyan
-foreach ($bin in @("tesseract", "libreoffice")) {
+foreach ($bin in @("libreoffice")) {
     $src = Join-Path $racine $bin
     if (Test-Path $src) {
         Copy-Item $src (Join-Path $dist $bin) -Recurse -Force

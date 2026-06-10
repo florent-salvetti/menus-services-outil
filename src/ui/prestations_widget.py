@@ -15,11 +15,7 @@ from PySide6.QtWidgets import (
 )
 
 from src.dossier import LignePrestation
-
-
-#: Régimes particuliers proposés (sans incidence tarifaire). Le libellé est
-#: reporté tel quel au bout du nom de la prestation sur devis + conditions.
-REGIMES = ["diabétique", "sans sel", "mixé"]
+from src.regimes import charger_regimes
 
 
 class _LigneWidget(QWidget):
@@ -28,7 +24,7 @@ class _LigneWidget(QWidget):
     modifie = Signal()
     supprimee = Signal(object)
 
-    def __init__(self, formules: list[str]):
+    def __init__(self, formules: list[str], regimes: list[str]):
         super().__init__()
         lay = QHBoxLayout(self)
         lay.setContentsMargins(0, 0, 0, 0)
@@ -48,7 +44,7 @@ class _LigneWidget(QWidget):
         self.regime_actif.setToolTip("Régime particulier, indiqué au bout du nom de la prestation")
         self.regime_actif.stateChanged.connect(self._toggle_regime)
         self.regime = QComboBox()
-        self.regime.addItems(REGIMES)
+        self.regime.addItems(regimes)
         self.regime.setVisible(False)  # masqué tant que la case n'est pas cochée
         self.regime.currentIndexChanged.connect(self.modifie)
 
@@ -78,13 +74,21 @@ class _LigneWidget(QWidget):
 
     def recharger_formules(self, formules: list[str]) -> None:
         """Met à jour la liste des formules en gardant la sélection si possible."""
-        choix = self.combo.currentText()
-        self.combo.blockSignals(True)
-        self.combo.clear()
-        self.combo.addItems(formules)
-        if choix in formules:
-            self.combo.setCurrentText(choix)
-        self.combo.blockSignals(False)
+        self._recharger_combo(self.combo, formules)
+
+    def recharger_regimes(self, regimes: list[str]) -> None:
+        """Met à jour la liste des régimes en gardant la sélection si possible."""
+        self._recharger_combo(self.regime, regimes)
+
+    @staticmethod
+    def _recharger_combo(combo: QComboBox, valeurs: list[str]) -> None:
+        choix = combo.currentText()
+        combo.blockSignals(True)
+        combo.clear()
+        combo.addItems(valeurs)
+        if choix in valeurs:
+            combo.setCurrentText(choix)
+        combo.blockSignals(False)
 
 
 class PrestationsWidget(QWidget):
@@ -95,6 +99,7 @@ class PrestationsWidget(QWidget):
     def __init__(self, formules: list[str]):
         super().__init__()
         self._formules = formules
+        self._regimes = charger_regimes()
         self._lignes: list[_LigneWidget] = []
 
         self._layout = QVBoxLayout(self)
@@ -112,7 +117,7 @@ class PrestationsWidget(QWidget):
         self.ajouter_ligne()  # une ligne au démarrage
 
     def ajouter_ligne(self) -> None:
-        ligne = _LigneWidget(self._formules)
+        ligne = _LigneWidget(self._formules, self._regimes)
         ligne.modifie.connect(self.modifie)
         ligne.supprimee.connect(self._supprimer)
         self._lignes.append(ligne)
@@ -136,3 +141,9 @@ class PrestationsWidget(QWidget):
         self._formules = formules
         for ligne in self._lignes:
             ligne.recharger_formules(formules)
+
+    def recharger_regimes(self) -> None:
+        """Relit regimes.json et le propage : lignes existantes + futurs ajouts."""
+        self._regimes = charger_regimes()
+        for ligne in self._lignes:
+            ligne.recharger_regimes(self._regimes)

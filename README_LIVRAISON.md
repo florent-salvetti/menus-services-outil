@@ -29,21 +29,22 @@ ou sur le Bureau). Il contient :
 MenusServices.exe        ← l'application
 _internal/               ← moteur (NE PAS modifier ni supprimer)
 modeles/                 ← trames Word + grille source (remplaçables)
-tarifs.json              ← grille tarifaire (modifiable à la main, voir §6)
+tarifs.json              ← grille tarifaire (éditable dans l'app, voir §6)
+regimes.json             ← liste des régimes particuliers (éditable dans l'app)
 config.example.json      ← modèle de configuration
-tesseract/               ← OCR embarqué (voir §2 si absent)
 ```
 `dossiers/` et `donnees/` se créent tout seuls au 1er lancement.
 
 ---
 
-## 2. Tesseract (OCR) — plus nécessaire
+## 2. Tesseract (OCR) — retiré de la livraison
 
 Depuis la révision du 10/06/2026, **aucune coordonnée bancaire n'est saisie**
 dans l'outil (l'autorisation de prélèvement sort avec les cases bancaires
 vides et le client joint son RIB). La lecture OCR du RIB n'est donc **plus
-utilisée** : le dossier `tesseract/` est optionnel et peut être omis de la
-livraison pour alléger le package (~80 Mo).
+utilisée** et le dossier `tesseract/` n'est **plus livré** (~80 Mo économisés).
+Le code OCR reste dans les sources (testé, débranché) au cas où la saisie
+bancaire reviendrait.
 
 ---
 
@@ -115,8 +116,10 @@ fichier `licences.json` doit contenir l'entrée de la clé :
 
 ## 7. Mises à jour (manuelles)
 
-- **Tarifs** : remplacer `tarifs.json` à côté de l'exe (par la nouvelle grille).
-  Rien d'autre à faire, rechargé au prochain lancement.
+- **Tarifs** : bouton « Éditer les tarifs » dans l'app (sauvegarde `.bak`
+  automatique), ou remplacer `tarifs.json` à côté de l'exe. Rechargé aussitôt.
+- **Régimes** : bouton « Éditer les régimes » dans l'app (ajouter / renommer /
+  supprimer), ou éditer `regimes.json` à la main.
 - **Trames Word** : remplacer les fichiers dans `modeles/` (garder les mêmes noms).
 - **Application** : nouvelle version = nouveau dossier `MenusServices/` remis par
   le prestataire (recopier par-dessus en conservant `config.json`, `tarifs.json`

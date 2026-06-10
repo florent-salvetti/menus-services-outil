@@ -35,6 +35,7 @@ from src.documents.conditions import JOURS
 from src.dossier import GRILLE, SaisieDossier, calculer_saisie, generer_dossier
 from src import compteur
 from src.ui.dialog_recap import DialogRecap
+from src.ui.dialog_regimes import DialogRegimes
 from src.ui.dialog_tarifs import DialogTarifs
 from src.ui.prestations_widget import PrestationsWidget
 from src.ui.style import appliquer_ombre, construire_bandeau, feuille_qss
@@ -68,7 +69,11 @@ class MainWindow(QWidget):
         self.btn_tarifs.setObjectName("boutonHeader")
         self.btn_tarifs.setCursor(Qt.PointingHandCursor)
         self.btn_tarifs.clicked.connect(self._editer_tarifs)
-        racine.addWidget(construire_bandeau([self.btn_tarifs]))  # bandeau logo + action
+        self.btn_regimes = QPushButton("Éditer les régimes")
+        self.btn_regimes.setObjectName("boutonHeader")
+        self.btn_regimes.setCursor(Qt.PointingHandCursor)
+        self.btn_regimes.clicked.connect(self._editer_regimes)
+        racine.addWidget(construire_bandeau([self.btn_regimes, self.btn_tarifs]))
 
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
@@ -109,6 +114,11 @@ class MainWindow(QWidget):
             self.prestations.recharger_formules(self._formules)
             self._maj_apercu()
             self._maj_etat()
+
+    def _editer_regimes(self) -> None:
+        """Ouvre l'éditeur des régimes ; recharge les listes si modifiés."""
+        if DialogRegimes(self).exec():
+            self.prestations.recharger_regimes()
 
     # ----------------------------------------------------------------- client
     def _build_client(self) -> None:

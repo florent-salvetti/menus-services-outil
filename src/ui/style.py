@@ -322,6 +322,17 @@ def feuille_qss() -> str:
     }}
     QTableCornerButton::section {{ background-color: {VERT_PALE}; border: none; }}
 
+    /* Listes (éditeur de régimes) */
+    QListWidget {{
+        background-color: {BLANC};
+        border: 1px solid {BORDURE_CARTE};
+        border-radius: 10px;
+        padding: 6px;
+    }}
+    QListWidget::item {{ padding: 8px 10px; border-radius: 7px; }}
+    QListWidget::item:hover {{ background-color: {VERT_PALE}; }}
+    QListWidget::item:selected {{ background-color: {VERT_PALE}; color: {BORDEAUX}; }}
+
     /* Zone de texte (récapitulatif) */
     QPlainTextEdit, QTextEdit {{
         background-color: {FOND_CHAMP};
