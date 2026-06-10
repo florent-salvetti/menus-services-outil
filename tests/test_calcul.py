@@ -149,3 +149,45 @@ def test_fmt_eur():
     assert fmt_eur(Decimal("130.8")) == "130,80 €"
     assert fmt_eur(Decimal("283.4")) == "283,40 €"
     assert fmt_eur(Decimal("1234.5")) == "1 234,50 €"
+
+
+# --------------------------------------------------------------------------- #
+# Réduction commerciale (Remise)
+# --------------------------------------------------------------------------- #
+def test_remise_pourcent_reduit_tous_les_totaux(grille):
+    from src.calcul import Remise
+
+    saisie = [("Menus du marché 4C", 6), ("Menus du jour 5C", 4)]
+    res = calculer(saisie, grille, remise=Remise("pourcent", Decimal("10")))
+    assert arrondi(res.prix_public_hebdo_ttc) == Decimal("130.80")
+    assert arrondi(res.remise_hebdo_ttc) == Decimal("13.08")
+    assert arrondi(res.total_hebdo_ttc) == Decimal("117.72")
+    # Invariant conservé : repas + service = total (à l'arrondi près)
+    assert arrondi(res.total_repas_ttc + res.total_service_ttc) == arrondi(res.total_hebdo_ttc)
+    # Reste à charge réduit dans la même proportion (426,21 × 0,9)
+    assert arrondi(res.total_apres_ci) == Decimal("383.59")
+    # Crédit d'impôt = mensuel − reste à charge
+    assert arrondi(res.credit_impot_mensuel) == arrondi(res.cout_mensuel_ttc - res.total_apres_ci)
+
+
+def test_remise_euros_par_semaine(grille):
+    from src.calcul import Remise
+
+    res = calculer([("Menus du marché 4C", 6)], grille, remise=Remise("euros", Decimal("6.80")))
+    assert arrondi(res.prix_public_hebdo_ttc) == Decimal("76.80")
+    assert arrondi(res.remise_hebdo_ttc) == Decimal("6.80")
+    assert arrondi(res.total_hebdo_ttc) == Decimal("70.00")
+
+
+def test_remise_superieure_au_total_est_plafonnee(grille):
+    from src.calcul import Remise
+
+    res = calculer([("Menus du marché 4C", 6)], grille, remise=Remise("euros", Decimal("999")))
+    assert arrondi(res.total_hebdo_ttc) == Decimal("0.00")
+    assert any("plafonnée" in a for a in res.avertissements)
+
+
+def test_sans_remise_pas_de_changement(resultat_reference):
+    assert resultat_reference.remise is None
+    assert resultat_reference.remise_hebdo_ttc == 0
+    assert arrondi(resultat_reference.prix_public_hebdo_ttc) == Decimal("130.80")

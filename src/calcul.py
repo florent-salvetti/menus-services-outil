@@ -118,6 +118,22 @@ class LigneCalcul:
         self.apres_ci_total = q * f.apres_ci if f.eligible_credit_impot else None
 
 
+@dataclass(frozen=True)
+class Remise:
+    """Réduction commerciale optionnelle appliquée au devis.
+
+    mode : "pourcent" (valeur = % du total hebdo TTC) ou "euros"
+           (valeur = montant TTC déduit par semaine).
+    La remise est répartie PROPORTIONNELLEMENT sur toutes les composantes
+    (HT, parts repas/service, reste à charge après crédit d'impôt) afin que
+    les invariants de la grille restent vrais (repas + service = total, et
+    crédit d'impôt = 50 % de la part service).
+    """
+
+    mode: str
+    valeur: Decimal
+
+
 @dataclass
 class Resultat:
     """Devis consolidé pour un ensemble de lignes de saisie."""
@@ -138,6 +154,11 @@ class Resultat:
     nb_repas_total: int
     avertissements: list[str]
 
+    # Réduction commerciale (montants APRÈS remise dans les champs ci-dessus).
+    remise: Optional[Remise] = None
+    remise_hebdo_ttc: Decimal = Decimal(0)   # montant TTC déduit / semaine
+    prix_public_hebdo_ttc: Decimal = Decimal(0)  # total hebdo TTC avant remise
+
 
 # --------------------------------------------------------------------------- #
 # Chargement de la grille
@@ -155,12 +176,16 @@ def charger_grille(chemin: str | Path) -> dict[str, Formule]:
 def calculer(
     saisie: list[tuple[str, int]] | list[dict],
     grille: dict[str, Formule],
+    remise: Optional[Remise] = None,
 ) -> Resultat:
     """Calcule un devis consolidé.
 
     `saisie` : liste de (nom_formule, quantite) ou de
                {"formule": ..., "nb_repas_semaine": ...}.
     `grille` : dict issu de `charger_grille`.
+    `remise` : réduction commerciale optionnelle (cf. Remise) ; les totaux
+               retournés sont APRÈS remise, le prix public est conservé dans
+               `prix_public_hebdo_ttc`.
     """
     lignes: list[LigneCalcul] = []
     avertissements: list[str] = []
@@ -210,6 +235,35 @@ def calculer(
                 f"non inclus dans le crédit calculé."
             )
 
+    # --- Réduction commerciale (optionnelle) --------------------------------
+    # Répartie au prorata sur TOUTES les composantes : les invariants
+    # (repas + service = total ; crédit = 50 % du service) restent vrais.
+    prix_public_hebdo_ttc = total_hebdo_ttc
+    remise_hebdo_ttc = z
+    if remise is not None and remise.valeur > 0 and total_hebdo_ttc > 0:
+        if remise.mode == "pourcent":
+            montant = total_hebdo_ttc * remise.valeur / Decimal(100)
+        elif remise.mode == "euros":
+            montant = remise.valeur
+        else:
+            raise ValueError(f"Mode de remise inconnu : {remise.mode!r}")
+        if montant > total_hebdo_ttc:
+            montant = total_hebdo_ttc
+            avertissements.append(
+                "Remise plafonnée au total du devis (elle dépassait le montant hebdomadaire)."
+            )
+        remise_hebdo_ttc = montant
+        ratio = (total_hebdo_ttc - montant) / total_hebdo_ttc
+        total_hebdo_ttc *= ratio
+        total_hebdo_ht *= ratio
+        total_repas_ttc *= ratio
+        total_repas_ht *= ratio
+        total_service_ttc *= ratio
+        total_service_ht *= ratio
+        cout_mensuel_ttc *= ratio
+        total_apres_ci *= ratio
+        credit_impot_mensuel = cout_mensuel_ttc - total_apres_ci
+
     return Resultat(
         lignes=lignes,
         total_hebdo_ttc=total_hebdo_ttc,
@@ -223,6 +277,9 @@ def calculer(
         total_apres_ci=total_apres_ci,
         nb_repas_total=sum(l.quantite for l in lignes),
         avertissements=avertissements,
+        remise=remise if remise_hebdo_ttc > 0 else None,
+        remise_hebdo_ttc=remise_hebdo_ttc,
+        prix_public_hebdo_ttc=prix_public_hebdo_ttc,
     )
 
 

@@ -50,14 +50,40 @@ def test_recap_montants_et_formules(resultat):
 
 
 def test_recap_iban_avec_mention_non_conserve(resultat):
-    txt = recapitulatif(_saisie(), resultat)
+    txt = recapitulatif(_saisie(mode_paiement="prelevement"), resultat)
     assert "FR76 3000 4000 0100 0012 3456 789" in txt
     assert "non conservé par l'outil" in txt
 
 
 def test_recap_sans_iban(resultat):
-    txt = recapitulatif(_saisie(iban=""), resultat)
+    txt = recapitulatif(_saisie(iban="", mode_paiement="prelevement"), resultat)
     assert "IBAN" not in txt
+
+
+def test_recap_iban_masque_sans_prelevement(resultat):
+    # IBAN saisi mais paiement par chèque : pas de ligne IBAN au récap.
+    txt = recapitulatif(_saisie(mode_paiement="cheque"), resultat)
+    assert "IBAN" not in txt
+    assert "Chèque bancaire" in txt
+
+
+def test_recap_mode_paiement(resultat):
+    assert "Prélèvement automatique" in recapitulatif(
+        _saisie(mode_paiement="prelevement"), resultat
+    )
+    assert "PAIEMENT" not in recapitulatif(_saisie(), resultat)
+
+
+def test_recap_tutelle(resultat):
+    txt = recapitulatif(
+        _saisie(tutelle=True, tutelle_organisme="UDAF 84",
+                tuteur_prenom="Jean", tuteur_nom="DUPONT"),
+        resultat,
+    )
+    assert "TUTELLE" in txt
+    assert "Jean DUPONT" in txt
+    assert "UDAF 84" in txt
+    assert "TUTELLE" not in recapitulatif(_saisie(), resultat)
 
 
 def test_recap_beneficiaire_masque_si_identique(resultat):

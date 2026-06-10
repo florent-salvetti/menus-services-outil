@@ -17,8 +17,10 @@ from datetime import date
 from pathlib import Path
 from typing import Optional
 
+from decimal import Decimal, InvalidOperation
+
 from src import compteur
-from src.calcul import Resultat, calculer, charger_grille, fmt_eur
+from src.calcul import Remise, Resultat, calculer, charger_grille, fmt_eur
 from src.documents.conditions import InfosConditions, generer_conditions
 from src.documents.devis import InfosDevis, generer_devis
 from src.documents.sepa import InfosMandat, generer_mandat
@@ -50,6 +52,11 @@ class SaisieDossier:
     ville: str = ""
     tel: str = ""
     email: str = ""
+    # Tutelle (client protégé : les documents mentionnent le représentant)
+    tutelle: bool = False
+    tutelle_organisme: str = ""
+    tuteur_prenom: str = ""
+    tuteur_nom: str = ""
     # Bénéficiaire
     benef_identique: bool = True
     benef_prenom: str = ""
@@ -58,11 +65,17 @@ class SaisieDossier:
     lieu_prestation: str = ""    # lieu de réalisation, distinct de l'adresse
     # Prestations
     lignes: list[LignePrestation] = field(default_factory=list)
+    # Réduction commerciale (devis)
+    remise_active: bool = False
+    remise_mode: str = "pourcent"   # "pourcent" ou "euros" (TTC / semaine)
+    remise_valeur: str = ""         # saisie brute, convertie en Decimal
     # Livraison
     tournee: str = "T1"
     jours_repas: list[str] = field(default_factory=list)
     commencement: str = "attendre"
     date_premiere_livraison: str = ""
+    # Paiement — le mandat SEPA n'est généré QUE pour "prelevement"
+    mode_paiement: str = ""         # "prelevement", "virement", "cheque" ou ""
     # Banque (mandat SEPA)
     banque_nom: str = ""
     banque_adresse: str = ""
@@ -121,6 +134,38 @@ def _beneficiaire(s: SaisieDossier) -> tuple[str, str, str]:
     return s.benef_prenom, s.benef_nom, prenom_nom
 
 
+def _tuteur_detail(s: SaisieDossier) -> str:
+    """« Prénom NOM (Organisme) » du tuteur, vide si pas de tutelle."""
+    if not s.tutelle:
+        return ""
+    tuteur = " ".join(x for x in (s.tuteur_prenom, s.tuteur_nom) if x.strip())
+    organisme = s.tutelle_organisme.strip()
+    if tuteur and organisme:
+        return f"{tuteur} ({organisme})"
+    return tuteur or organisme
+
+
+def _mention_tutelle(s: SaisieDossier) -> str:
+    """« Sous tutelle — représenté par Prénom NOM (Organisme) », vide sinon."""
+    if not s.tutelle:
+        return ""
+    detail = _tuteur_detail(s)
+    return f"Sous tutelle — représenté par {detail}" if detail else "Sous tutelle"
+
+
+def _remise(s: SaisieDossier) -> Optional[Remise]:
+    """Construit la Remise depuis la saisie (None si inactive ou invalide)."""
+    if not s.remise_active:
+        return None
+    try:
+        valeur = Decimal(str(s.remise_valeur).replace(",", ".").strip() or "0")
+    except InvalidOperation:
+        return None
+    if valeur <= 0:
+        return None
+    return Remise(mode=s.remise_mode, valeur=valeur)
+
+
 # --------------------------------------------------------------------------- #
 # Calcul (réutilise le moteur, une seule fois)
 # --------------------------------------------------------------------------- #
@@ -130,7 +175,7 @@ def calculer_saisie(saisie: SaisieDossier) -> Optional[Resultat]:
     if not lignes:
         return None
     grille = charger_grille(GRILLE)
-    return calculer(lignes, grille)
+    return calculer(lignes, grille, remise=_remise(saisie))
 
 
 # --------------------------------------------------------------------------- #
@@ -159,6 +204,9 @@ def recapitulatif(saisie: SaisieDossier, resultat: Resultat) -> str:
     )
     if contact:
         lignes.append(f"             {contact}")
+    tutelle = _mention_tutelle(saisie)
+    if tutelle:
+        lignes.append(f"TUTELLE      {tutelle.removeprefix('Sous tutelle — ')}")
 
     if not saisie.benef_identique:
         _, _, prenom_nom = _beneficiaire(saisie)
@@ -175,6 +223,11 @@ def recapitulatif(saisie: SaisieDossier, resultat: Resultat) -> str:
     presta = " + ".join(f"{l.formule.nom} ×{l.quantite}" for l in resultat.lignes)
     lignes.append(f"PRESTATIONS  {presta}  ({resultat.nb_repas_total} repas/sem.)")
 
+    if resultat.remise_hebdo_ttc > 0:
+        lignes.append(
+            f"REMISE       -{fmt_eur(resultat.remise_hebdo_ttc)} TTC / semaine "
+            f"(prix public {fmt_eur(resultat.prix_public_hebdo_ttc)})"
+        )
     lignes.append(
         f"MONTANTS     Hebdo {fmt_eur(resultat.total_hebdo_ttc)} TTC "
         f"({fmt_eur(resultat.total_hebdo_ht)} HT)"
@@ -185,8 +238,16 @@ def recapitulatif(saisie: SaisieDossier, resultat: Resultat) -> str:
         f"{fmt_eur(resultat.total_apres_ci)} / mois"
     )
 
+    paiement = {
+        "prelevement": "Prélèvement automatique",
+        "virement": "Virement bancaire",
+        "cheque": "Chèque bancaire",
+    }.get(saisie.mode_paiement)
+    if paiement:
+        lignes.append(f"PAIEMENT     {paiement}")
+
     iban = normaliser(saisie.iban)
-    if iban:
+    if iban and saisie.mode_paiement == "prelevement":
         lignes.append(
             f"IBAN         {formater_affichage(iban)}  (non conservé par l'outil)"
         )
@@ -223,9 +284,14 @@ def generer_dossier(saisie: SaisieDossier, racine_sortie: Path = DOSSIERS) -> Re
     benef_prenom, benef_nom, benef_prenom_nom = _beneficiaire(saisie)
     base = f"{_slug(saisie.nom)}_{_slug(saisie.prenom)}"
 
+    # Tutelle : la mention suit l'identité du client sur chaque document
+    # (docxtpl rend « \n » comme un saut de ligne).
+    tutelle = _mention_tutelle(saisie)
+    client_nom_doc = f"{client_nom}\n{tutelle}" if tutelle else client_nom
+
     # --- Devis --------------------------------------------------------------
     infos_devis = InfosDevis(
-        client_nom=client_nom,
+        client_nom=client_nom_doc,
         client_adresse=client_adresse,
         devis_num=saisie.devis_num,
         date_devis=saisie.date_devis,
@@ -236,9 +302,13 @@ def generer_dossier(saisie: SaisieDossier, racine_sortie: Path = DOSSIERS) -> Re
     fichiers.append(generer_devis(resultat, infos_devis, dossier / f"Devis_{base}.docx"))
 
     # --- Conditions particulières (selon la tournée) ------------------------
+    # Conditions : la trame a son PROPRE bloc tutelle (« Si le client a été
+    # placé sous tutelle… représenté par …, tuteur ») → on le remplit, sans
+    # dupliquer la mention sous l'identité.
     infos_cond = InfosConditions(
         client_nom=f"{saisie.nom} {saisie.prenom}".strip(),
         client_adresse=client_adresse,
+        tuteur=_tuteur_detail(saisie),
         benef_nom=benef_nom,
         benef_prenom=benef_prenom,
         # Adresse du bénéficiaire : saisie EXPLICITE si différent, jamais
@@ -248,25 +318,28 @@ def generer_dossier(saisie: SaisieDossier, racine_sortie: Path = DOSSIERS) -> Re
         commencement=saisie.commencement,
         date_premiere_livraison=saisie.date_premiere_livraison,
         jours_repas=saisie.jours_repas,
+        mode_paiement=saisie.mode_paiement,
         lieu=saisie.lieu,
         date=saisie.date_devis,
     )
     fichiers.append(
         generer_conditions(
             saisie.tournee, infos_cond, resultat,
-            dossier / f"Conditions_{saisie.tournee}_{base}.docx",
+            dossier / f"Conditions_Particulieres_{saisie.tournee}_{base}.docx",
         )
     )
 
-    # --- Mandat SEPA (uniquement si IBAN fourni ET valide) ------------------
+    # --- Mandat SEPA (uniquement si paiement par prélèvement automatique) ---
     iban = normaliser(saisie.iban)
-    if not iban:
+    if saisie.mode_paiement != "prelevement":
+        pass  # virement / chèque / non renseigné : pas de mandat, pas d'alerte
+    elif not iban:
         avertissements.append("Mandat SEPA non généré (pas d'IBAN saisi).")
     elif not iban_valide(iban):
         avertissements.append("IBAN invalide (clé mod 97) : mandat SEPA non généré — vérifiez l'IBAN.")
     else:
         infos_sepa = InfosMandat(
-            debiteur_nom=client_nom,
+            debiteur_nom=client_nom_doc,
             debiteur_adresse=client_adresse,
             banque_nom=saisie.banque_nom,
             banque_adresse=saisie.banque_adresse,

@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (
     QButtonGroup,
     QCheckBox,
     QComboBox,
+    QDoubleSpinBox,
     QFileDialog,
     QFrame,
     QGridLayout,
@@ -80,10 +81,12 @@ class MainWindow(QWidget):
         self._build_beneficiaire()
         self._build_prestations()
         self._build_livraison()
+        self._build_paiement()
         self._build_banque()
         self._build_devis()
         self._build_barre(racine)
 
+        self._toggle_paiement()  # banque masquée tant que prélèvement non coché
         self._maj_apercu()
         self._maj_etat()
 
@@ -119,8 +122,32 @@ class MainWindow(QWidget):
         g.addWidget(QLabel("Email"), 3, 2)
         g.addWidget(self.email, 3, 3, 1, 3)
 
+        # Tutelle : si coché, les documents mentionnent le représentant légal.
+        self.tutelle = QCheckBox("Client sous tutelle")
+        self.tutelle.stateChanged.connect(self._toggle_tutelle)
+        self.tutelle_organisme = QLineEdit()
+        self.tutelle_organisme.setPlaceholderText("organisme (ex. UDAF 84)")
+        self.tuteur_prenom = QLineEdit()
+        self.tuteur_nom = QLineEdit()
+        g.addWidget(self.tutelle, 4, 0, 1, 2)
+        g.addWidget(QLabel("Organisme"), 5, 0)
+        g.addWidget(self.tutelle_organisme, 5, 1, 1, 3)
+        g.addWidget(QLabel("Prénom tuteur"), 6, 0)
+        g.addWidget(self.tuteur_prenom, 6, 1)
+        g.addWidget(QLabel("NOM tuteur"), 6, 2)
+        g.addWidget(self.tuteur_nom, 6, 3)
+        self._tutelle_champs = [self.tutelle_organisme, self.tuteur_prenom, self.tuteur_nom]
+        self._toggle_tutelle()
+
         self.nom.textChanged.connect(self._maj_etat)
         self._form.addWidget(box)
+
+    def _toggle_tutelle(self) -> None:
+        actif = self.tutelle.isChecked()
+        for w in self._tutelle_champs:
+            w.setEnabled(actif)
+            if not actif:
+                w.clear()
 
     # ----------------------------------------------------------- bénéficiaire
     def _build_beneficiaire(self) -> None:
@@ -195,7 +222,9 @@ class MainWindow(QWidget):
 
         self.comm_attendre = QRadioButton("Attendre le délai de 14 j")
         self.comm_avant = QRadioButton("Démarrer avant la fin du délai")
-        self.comm_attendre.setChecked(True)
+        # Par défaut : démarrage AVANT la fin du délai de rétractation
+        # (cas le plus courant en agence — demande client).
+        self.comm_avant.setChecked(True)
         grp2 = QButtonGroup(self)
         grp2.addButton(self.comm_attendre)
         grp2.addButton(self.comm_avant)
@@ -218,9 +247,49 @@ class MainWindow(QWidget):
         g.addLayout(ligne_c, 2, 1)
         self._form.addWidget(box)
 
+    # --------------------------------------------------------------- paiement
+    def _build_paiement(self) -> None:
+        box, g = _section("Mode de paiement")
+        self.paie_prelevement = QRadioButton("Prélèvement automatique (RIB demandé)")
+        self.paie_virement = QRadioButton("Virement bancaire")
+        self.paie_cheque = QRadioButton("Chèque bancaire")
+        grp = QButtonGroup(self)
+        for b in (self.paie_prelevement, self.paie_virement, self.paie_cheque):
+            grp.addButton(b)
+            b.toggled.connect(self._toggle_paiement)
+        ligne = QHBoxLayout()
+        ligne.setSpacing(20)
+        ligne.addWidget(self.paie_prelevement)
+        ligne.addWidget(self.paie_virement)
+        ligne.addWidget(self.paie_cheque)
+        ligne.addStretch()
+        g.addLayout(ligne, 0, 0)
+        self._form.addWidget(box)
+
+    def _mode_paiement(self) -> str:
+        if self.paie_prelevement.isChecked():
+            return "prelevement"
+        if self.paie_virement.isChecked():
+            return "virement"
+        if self.paie_cheque.isChecked():
+            return "cheque"
+        return ""
+
+    def _toggle_paiement(self) -> None:
+        """La section banque (RIB) n'apparaît que pour le prélèvement automatique."""
+        prelevement = self.paie_prelevement.isChecked()
+        self.box_banque.setVisible(prelevement)
+        if not prelevement:
+            self.iban.clear()
+            self.bic.clear()
+            self.banque_nom.clear()
+            self.banque_adresse.clear()
+        self._maj_etat()
+
     # ----------------------------------------------------------------- banque
     def _build_banque(self) -> None:
         box, g = _section("Banque (mandat SEPA) — IBAN/BIC non conservés (RGPD)")
+        self.box_banque = box
         self.banque_nom = QLineEdit()
         self.banque_adresse = QLineEdit()
         self.iban = QLineEdit()
@@ -332,7 +401,35 @@ class MainWindow(QWidget):
         g.addWidget(self.date_validite, 0, 5)
         g.addWidget(QLabel("Fait à"), 1, 0)
         g.addWidget(self.lieu, 1, 1)
+
+        # Réduction commerciale optionnelle (ligne dédiée sur le devis).
+        self.remise_active = QCheckBox("Appliquer une réduction")
+        self.remise_active.stateChanged.connect(self._toggle_remise)
+        self.remise_valeur = QDoubleSpinBox()
+        self.remise_valeur.setRange(0.0, 9999.0)
+        self.remise_valeur.setDecimals(2)
+        self.remise_valeur.setFixedWidth(90)
+        self.remise_valeur.valueChanged.connect(self._maj_apercu)
+        self.remise_unite = QComboBox()
+        self.remise_unite.addItems(["%", "€ TTC / semaine"])
+        self.remise_unite.currentIndexChanged.connect(self._maj_apercu)
+        ligne_r = QHBoxLayout()
+        ligne_r.setSpacing(10)
+        ligne_r.addWidget(self.remise_valeur)
+        ligne_r.addWidget(self.remise_unite)
+        ligne_r.addStretch()
+        g.addWidget(self.remise_active, 2, 0, 1, 2)
+        g.addLayout(ligne_r, 2, 2, 1, 4)
+        self._toggle_remise()
         self._form.addWidget(box)
+
+    def _toggle_remise(self) -> None:
+        actif = self.remise_active.isChecked()
+        self.remise_valeur.setEnabled(actif)
+        self.remise_unite.setEnabled(actif)
+        if not actif:
+            self.remise_valeur.setValue(0.0)
+        self._maj_apercu()
 
     # ------------------------------------------------------------- barre bas
     def _build_barre(self, racine: QVBoxLayout) -> None:
@@ -368,15 +465,22 @@ class MainWindow(QWidget):
             civilite=self.civilite.currentText(), prenom=self.prenom.text(), nom=self.nom.text(),
             adresse=self.adresse.text(), cp=self.cp.text(), ville=self.ville.text(),
             tel=self.tel.text(), email=self.email.text(),
+            tutelle=self.tutelle.isChecked(),
+            tutelle_organisme=self.tutelle_organisme.text(),
+            tuteur_prenom=self.tuteur_prenom.text(), tuteur_nom=self.tuteur_nom.text(),
             benef_identique=self.benef_identique.isChecked(),
             benef_prenom=self.benef_prenom.text(), benef_nom=self.benef_nom.text(),
             benef_adresse=self.benef_adresse.text(),
             lieu_prestation=self.lieu_prestation.text(),
             lignes=self.prestations.lignes(),
+            remise_active=self.remise_active.isChecked(),
+            remise_mode="pourcent" if self.remise_unite.currentIndex() == 0 else "euros",
+            remise_valeur=str(self.remise_valeur.value()),
             tournee="T1" if self.tournee_t1.isChecked() else "T2",
             jours_repas=[j for j, cb in self.jours.items() if cb.isChecked()],
             commencement="attendre" if self.comm_attendre.isChecked() else "avant",
             date_premiere_livraison=self.date_premiere.text(),
+            mode_paiement=self._mode_paiement(),
             banque_nom=self.banque_nom.text(), banque_adresse=self.banque_adresse.text(),
             iban=self.iban.text(), bic=self.bic.text(),
             devis_num=self.devis_num.text(), date_devis=self.date_devis.text(),
@@ -401,9 +505,15 @@ class MainWindow(QWidget):
             manques.append("nom du client")
         if not self.prestations.lignes():
             manques.append("au moins une formule")
+        if not self._mode_paiement():
+            manques.append("mode de paiement")
         self.bouton.setEnabled(not manques)
         self.statut.setText("Prêt à générer." if not manques else "Manque : " + ", ".join(manques))
 
+        if self._mode_paiement() != "prelevement":
+            self.sepa_note.setText("Mandat SEPA : non requis (pas de prélèvement automatique).")
+            self.sepa_note.setStyleSheet("color: #555;")
+            return
         iban = normaliser(self.iban.text())
         if not iban:
             self.sepa_note.setText("Mandat SEPA : pas d'IBAN → non généré.")

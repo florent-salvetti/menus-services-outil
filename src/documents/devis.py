@@ -85,6 +85,16 @@ def _nouveau_paragraphe(ancre: Paragraph, texte: str, *, avant: bool) -> Paragra
     return para
 
 
+def _nouveau_paragraphe_meme_police(ancre: Paragraph, texte: str) -> Paragraph:
+    """Insère après `ancre` un paragraphe reprenant la police de son 1er run."""
+    para = _nouveau_paragraphe(ancre, texte, avant=False)
+    if ancre.runs and para.runs:
+        src, dst = ancre.runs[0].font, para.runs[0].font
+        dst.name = src.name
+        dst.size = src.size
+    return para
+
+
 def _rendre_conditionnel(paragraphe: Paragraph, condition: str) -> None:
     """Entoure un paragraphe de balises docxtpl `{%p if %}` / `{%p endif %}`.
 
@@ -110,8 +120,16 @@ def construire_template(
     # Vides => le paragraphe entier disparaît (pas d'intitulé orphelin).
     para_beneficiaire = doc.paragraphs[7]
     para_lieu = doc.paragraphs[8]
+    para_service = doc.paragraphs[16]  # « - dont prix du Service… »
     _rendre_conditionnel(para_beneficiaire, "beneficiaire")
     _rendre_conditionnel(para_lieu, "lieu_prestation")
+
+    # Réduction commerciale : ligne ajoutée entre la décomposition du tarif et
+    # « Devis pour 1 semaine », visible UNIQUEMENT quand une remise est saisie.
+    para_remise = _nouveau_paragraphe_meme_police(
+        para_service, "Remise commerciale : {{ remise_detail }}"
+    )
+    _rendre_conditionnel(para_remise, "remise_detail")
 
     # Tableau « Total mensuel TTC » / « Total après crédit d'impôt »
     tbl = doc.tables[0]
@@ -154,6 +172,22 @@ def _detail_formules(resultat: Resultat) -> str:
     )
 
 
+def _detail_remise(resultat: Resultat) -> str:
+    """Texte de la ligne « Remise commerciale », vide si aucune remise.
+
+    Ex. « - 5 % soit - 6,54 € TTC / semaine (prix public : 130,80 € TTC / semaine) ».
+    Les montants affichés sur le devis sont déjà APRÈS remise (cf. calcul).
+    """
+    if resultat.remise is None or resultat.remise_hebdo_ttc <= 0:
+        return ""
+    public = f"(prix public : {fmt_num(resultat.prix_public_hebdo_ttc)} € TTC / semaine)"
+    montant = f"- {fmt_num(resultat.remise_hebdo_ttc)} € TTC / semaine"
+    if resultat.remise.mode == "pourcent":
+        pct = f"{fmt_num(resultat.remise.valeur)}".removesuffix(",00")
+        return f"- {pct} % soit {montant.lstrip('- ')} {public}"
+    return f"{montant} {public}"
+
+
 def contexte_devis(resultat: Resultat, infos: InfosDevis) -> dict:
     """Construit le dict de rendu docxtpl à partir du résultat de calcul."""
     # Lignes optionnelles : vides si identiques au client → masquées au rendu.
@@ -176,6 +210,8 @@ def contexte_devis(resultat: Resultat, infos: InfosDevis) -> dict:
         # détail multi-formules (§6)
         "nb_repas_detail": _detail_repas(resultat),
         "formule_detail": _detail_formules(resultat),
+        # remise commerciale (ligne masquée si vide)
+        "remise_detail": _detail_remise(resultat),
         # totaux consolidés (nombres seuls, la trame porte « € » / « Euros HT »)
         "tarif_ttc": fmt_num(resultat.total_hebdo_ttc),
         "tarif_ht": fmt_num(resultat.total_hebdo_ht),
