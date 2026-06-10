@@ -35,6 +35,7 @@ from src.documents.conditions import JOURS
 from src.dossier import GRILLE, SaisieDossier, calculer_saisie, generer_dossier
 from src import compteur
 from src.ui.dialog_recap import DialogRecap
+from src.ui.dialog_tarifs import DialogTarifs
 from src.ui.prestations_widget import PrestationsWidget
 from src.ui.style import appliquer_ombre, construire_bandeau, feuille_qss
 
@@ -62,18 +63,32 @@ class MainWindow(QWidget):
         racine = QVBoxLayout(self)
         racine.setContentsMargins(0, 0, 0, 0)
         racine.setSpacing(0)
-        racine.addWidget(construire_bandeau())  # bandeau logo (décoratif)
+
+        self.btn_tarifs = QPushButton("Éditer les tarifs")
+        self.btn_tarifs.setObjectName("boutonHeader")
+        self.btn_tarifs.setCursor(Qt.PointingHandCursor)
+        self.btn_tarifs.clicked.connect(self._editer_tarifs)
+        racine.addWidget(construire_bandeau([self.btn_tarifs]))  # bandeau logo + action
 
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         racine.addWidget(scroll, 1)
 
-        contenu = QWidget()
-        contenu.setObjectName("page")
-        scroll.setWidget(contenu)
-        self._form = QVBoxLayout(contenu)
-        self._form.setContentsMargins(22, 18, 22, 18)
-        self._form.setSpacing(16)
+        # Page : colonne centrée à largeur lisible (l'app se lance maximisée ;
+        # sans plafond, les champs s'étirent sur toute la largeur de l'écran).
+        page = QWidget()
+        page.setObjectName("page")
+        scroll.setWidget(page)
+        centrage = QHBoxLayout(page)
+        centrage.setContentsMargins(0, 0, 0, 0)
+        colonne = QWidget()
+        colonne.setMaximumWidth(1010)
+        centrage.addStretch(1)
+        centrage.addWidget(colonne)
+        centrage.addStretch(1)
+        self._form = QVBoxLayout(colonne)
+        self._form.setContentsMargins(24, 20, 24, 24)
+        self._form.setSpacing(18)
 
         self._build_client()
         self._build_beneficiaire()
@@ -86,12 +101,21 @@ class MainWindow(QWidget):
         self._maj_apercu()
         self._maj_etat()
 
+    # --------------------------------------------------------- édition tarifs
+    def _editer_tarifs(self) -> None:
+        """Ouvre l'éditeur de la grille ; recharge les formules si modifiée."""
+        if DialogTarifs(self).exec():
+            self._formules = list(charger_grille(GRILLE).keys())
+            self.prestations.recharger_formules(self._formules)
+            self._maj_apercu()
+            self._maj_etat()
+
     # ----------------------------------------------------------------- client
     def _build_client(self) -> None:
         box, g = _section("Client / payeur")
         self.civilite = QComboBox()
         self.civilite.addItems(["Mme", "M."])
-        self.civilite.setFixedWidth(80)
+        self.civilite.setFixedWidth(104)
         self.prenom = QLineEdit()
         self.nom = QLineEdit()
         self.adresse = QLineEdit()
@@ -326,10 +350,12 @@ class MainWindow(QWidget):
         barre.setObjectName("barreResume")
         barre.setFrameShape(QFrame.StyledPanel)
         lay = QVBoxLayout(barre)
+        lay.setContentsMargins(24, 12, 24, 12)
 
         self.apercu = QLabel("Aperçu : —")
         self.apercu.setObjectName("apercu")
         self.statut = QLabel("")
+        self.statut.setObjectName("statut")
         self.sepa_note = QLabel("")
 
         ligne = QHBoxLayout()
@@ -406,10 +432,10 @@ class MainWindow(QWidget):
                 "Autorisation de prélèvement : sera générée (coordonnées bancaires "
                 "non saisies — le client joint son RIB)."
             )
-            self.sepa_note.setStyleSheet("color: green;")
+            self.sepa_note.setStyleSheet("color: #74A714; font-size: 9pt;")
         else:
             self.sepa_note.setText("Autorisation de prélèvement : non requise.")
-            self.sepa_note.setStyleSheet("color: #555;")
+            self.sepa_note.setStyleSheet("color: #8A8C7E; font-size: 9pt;")
 
     # -------------------------------------------------------------- génération
     def _generer(self) -> None:

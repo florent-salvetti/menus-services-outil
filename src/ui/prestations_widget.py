@@ -76,6 +76,16 @@ class _LigneWidget(QWidget):
         regime = self.regime.currentText() if self.regime_actif.isChecked() else ""
         return LignePrestation(self.combo.currentText(), self.spin.value(), regime=regime)
 
+    def recharger_formules(self, formules: list[str]) -> None:
+        """Met à jour la liste des formules en gardant la sélection si possible."""
+        choix = self.combo.currentText()
+        self.combo.blockSignals(True)
+        self.combo.clear()
+        self.combo.addItems(formules)
+        if choix in formules:
+            self.combo.setCurrentText(choix)
+        self.combo.blockSignals(False)
+
 
 class PrestationsWidget(QWidget):
     """Liste dynamique de prestations + bouton « ajouter une formule »."""
@@ -120,3 +130,9 @@ class PrestationsWidget(QWidget):
     def lignes(self) -> list[LignePrestation]:
         """Lignes valides (formule choisie + quantité > 0)."""
         return [l.ligne() for l in self._lignes if l.spin.value() > 0]
+
+    def recharger_formules(self, formules: list[str]) -> None:
+        """Propage une nouvelle grille : lignes existantes + futurs ajouts."""
+        self._formules = formules
+        for ligne in self._lignes:
+            ligne.recharger_formules(formules)
