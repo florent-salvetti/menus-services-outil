@@ -16,7 +16,7 @@ dossier, on configure, ça marche. Aucune installation de Python.
 | Imprimante par défaut configurée | bouton « Imprimer le dossier complet » | optionnel |
 
 > Pas besoin de Python, ni d'Office pour la génération des `.docx` (seulement
-> pour la conversion PDF). L'OCR (Tesseract) est embarqué.
+> pour la conversion PDF).
 
 ---
 
@@ -37,20 +37,13 @@ tesseract/               ← OCR embarqué (voir §2 si absent)
 
 ---
 
-## 2. Vérifier / déposer Tesseract (OCR du RIB)
+## 2. Tesseract (OCR) — plus nécessaire
 
-Si le dossier **`tesseract/`** est **déjà présent** à côté de l'exe → rien à faire.
-
-Sinon, le déposer :
-1. Installer Tesseract (UB Mannheim) sur une machine : <https://github.com/UB-Mannheim/tesseract/wiki> → `tesseract-ocr-w64-setup-5.x.x.exe`, en cochant **French (fra)**.
-2. Copier le contenu de l'installation dans `MenusServices/tesseract/` de sorte à obtenir :
-   ```
-   MenusServices/tesseract/tesseract.exe
-   MenusServices/tesseract/tessdata/fra.traineddata
-   MenusServices/tesseract/tessdata/eng.traineddata
-   ```
-> L'OCR n'est qu'une aide : l'IBAN reste **toujours validé à l'écran** (mod 97).
-> Sans Tesseract, la saisie manuelle de l'IBAN fonctionne normalement.
+Depuis la révision du 10/06/2026, **aucune coordonnée bancaire n'est saisie**
+dans l'outil (l'autorisation de prélèvement sort avec les cases bancaires
+vides et le client joint son RIB). La lecture OCR du RIB n'est donc **plus
+utilisée** : le dossier `tesseract/` est optionnel et peut être omis de la
+livraison pour alléger le package (~80 Mo).
 
 ---
 
@@ -99,18 +92,21 @@ fichier `licences.json` doit contenir l'entrée de la clé :
    Doit afficher **`SELFTEST PASS`** et confirmer :
    - `RACINE` = le dossier de l'exe ;
    - licence lue (`autorise=True`) ;
-   - génération `devis=True conditions=True mandat=True cgv=True` ;
-   - `Tesseract présent=True` et OCR `valide=True` (si `tesseract/` déposé).
+   - génération `devis=True conditions=True mandat=True cgv=True`.
+   (La ligne OCR/Tesseract est informative : l'OCR n'est plus utilisé par l'app.)
 
 ---
 
 ## 6. Usage courant
 
-- **Saisie** : remplir le formulaire (client, bénéficiaire, formules, tournée
-  T1/T2, jours, banque). L'IBAN peut être pré-rempli depuis un RIB (bouton
-  « 📷 Lire un RIB ») — **toujours vérifier** le ✓ vert avant génération.
+- **Saisie** : remplir le formulaire (client + tutelle éventuelle, bénéficiaire,
+  formules + régime éventuel, réduction éventuelle, tournée T1/T2, jours,
+  **mode de paiement**). Le n° de devis est proposé au format `JJMMAAAA-N`
+  (réinitialisé chaque jour).
 - **Générer** : produit un dossier `dossiers/NOM_Prénom_AAAA-MM-JJ/` avec devis,
-  conditions, mandat SEPA (si IBAN valide) et CGV.
+  conditions particulières et CGV ; si « Prélèvement automatique » est coché,
+  l'**autorisation de prélèvement** est ajoutée (cases bancaires vides — le
+  client joint son RIB).
 - **Récap** : bouton « 📋 Copier » → coller dans le CRM (l'outil ne touche jamais au CRM).
 - **Imprimer** : bouton « 🖨 Imprimer le dossier complet » → PDF fusionné (via Word)
   rangé dans le dossier + envoi imprimante. En cas d'échec, les `.docx` restent disponibles.
@@ -131,8 +127,8 @@ fichier `licences.json` doit contenir l'entrée de la clé :
 ## 8. Données & RGPD (rappel)
 
 - Traitement **local** ; seul appel réseau : la vérification de licence.
-- **IBAN/BIC non conservés** par l'outil (servent à générer le mandat, puis écartés) ;
-  le RIB importé n'est **ni copié ni supprimé**.
+- **Aucune coordonnée bancaire saisie ni stockée** : l'autorisation de
+  prélèvement sort vierge de toute donnée bancaire, le client joint son RIB.
 - La base locale (dossiers bénéficiaires) **n'est pas chiffrée** dans cette version
   (risque assumé) : protéger l'accès au PC. Un contrat de sous-traitance RGPD doit
   être signé en parallèle (hors logiciel).
