@@ -1,5 +1,6 @@
 # Build portable Windows — Générateur de documents Les Menus Services.
 # Lance : powershell -ExecutionPolicy Bypass -File build_portable.ps1
+# Option : -SansZip pour sauter l'archive de livraison (itérations locales).
 #
 # 1) construit l'exe avec PyInstaller (--onedir via le .spec)
 # 2) copie les DONNÉES à côté de l'exe (modeles/, tarifs.json, config.example.json)
@@ -10,6 +11,8 @@
 #    de dev (config.json, licences.dev.json) ni les artefacts locaux
 # Résultat : dist\MenusServices\  = le dossier à copier sur le PC de Michaël,
 #            dist\MenusServices.zip = l'archive à envoyer.
+
+param([switch]$SansZip)
 
 $ErrorActionPreference = "Stop"
 $racine = $PSScriptRoot
@@ -41,6 +44,14 @@ foreach ($bin in @("libreoffice")) {
     } else {
         Write-Host "   $bin absent (a deposer manuellement dans le dossier livre)." -ForegroundColor Yellow
     }
+}
+
+if ($SansZip) {
+    Write-Host "== 4. Archive de livraison : SAUTEE (-SansZip) ==" -ForegroundColor Yellow
+    Write-Host "   ATTENTION : dist\MenusServices.zip (s'il existe) date d'un build precedent." -ForegroundColor Yellow
+    Write-Host ""
+    Write-Host "OK -> $dist" -ForegroundColor Green
+    exit 0
 }
 
 Write-Host "== 4. Archive de livraison (dist\MenusServices.zip) ==" -ForegroundColor Cyan
