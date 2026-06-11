@@ -36,9 +36,11 @@ TEMPLATE_GENERE = RACINE / "modeles" / "_template_devis.docx"  # copie balisée
 #: Le label reprend EXACTEMENT le texte de la trame (hors pointillés), suivi
 #: de la/les balise(s). Les « € » / « Euros HT » de la trame sont préservés.
 _PARA_REMPLACEMENTS = {
-    1:  "{{ civilite }}",   # « Monsieur / Madame » figé -> civilité réelle
-    2:  "{{ client_nom }}",
-    3:  "{{ client_adresse }}",
+    # En-tête coordonnées — révision client 11/06/2026 :
+    # « M./Mme NOM Prénom » sur UNE ligne, puis l'adresse, puis « CP Ville ».
+    1:  "{{ client_identite }}",
+    2:  "{{ client_rue }}",
+    3:  "{{ client_cp_ville }}",
     4:  "Devis N° {{ devis_num }}",
     5:  "Date de devis : {{ date_devis }}",
     6:  "Date de validité : {{ date_validite }}",
@@ -148,9 +150,10 @@ def construire_template(
 class InfosDevis:
     """Champs non tarifaires du devis (alimentés par l'UI plus tard)."""
 
-    civilite: str = ""        # « Monsieur » ou « Madame »
-    client_nom: str = ""
-    client_adresse: str = ""
+    civilite: str = ""        # « M. » ou « Mme »
+    client_nom: str = ""      # « NOM Prénom » (+ mention tutelle éventuelle)
+    client_rue: str = ""      # adresse (rue)
+    client_cp_ville: str = "" # « CP Ville »
     devis_num: str = ""
     date_devis: str = ""
     date_validite: str = ""
@@ -242,15 +245,24 @@ def contexte_devis(resultat: Resultat, infos: InfosDevis) -> dict:
     beneficiaire = infos.beneficiaire.strip()
     if beneficiaire and beneficiaire == infos.client_nom.strip():
         beneficiaire = ""
+    client_adresse = ", ".join(
+        x for x in (infos.client_rue.strip(), infos.client_cp_ville.strip()) if x
+    )
     lieu_prestation = infos.lieu_prestation.strip()
-    if lieu_prestation and lieu_prestation == infos.client_adresse.strip():
+    if lieu_prestation and lieu_prestation == client_adresse:
         lieu_prestation = ""
+
+    # « M./Mme NOM Prénom » sur une ligne (la mention tutelle éventuelle de
+    # client_nom passe à la ligne via le « \n » rendu par docxtpl).
+    identite = " ".join(
+        x for x in (infos.civilite.strip(), infos.client_nom.strip()) if x
+    )
 
     return {
         # champs non tarifaires
-        "civilite": infos.civilite or "Monsieur / Madame",
-        "client_nom": infos.client_nom,
-        "client_adresse": infos.client_adresse,
+        "client_identite": identite or "Monsieur / Madame",
+        "client_rue": infos.client_rue,
+        "client_cp_ville": infos.client_cp_ville,
         "devis_num": infos.devis_num,
         "date_devis": infos.date_devis,
         "date_validite": infos.date_validite,

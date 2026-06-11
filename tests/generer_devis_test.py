@@ -34,8 +34,10 @@ def main() -> None:
         [("Menus du marché 4C", 6), ("Menus du jour 5C", 4)], grille
     )
     infos1 = InfosDevis(
-        client_nom="Mme Jeanne MARTIN",
-        client_adresse="12 rue des Lilas, 84100 Orange",
+        civilite="Mme",
+        client_nom="MARTIN Jeanne",
+        client_rue="12 rue des Lilas",
+        client_cp_ville="84100 Orange",
         devis_num="2026-0001",
         date_devis="07/06/2026",
         date_validite="07/07/2026",
@@ -50,8 +52,10 @@ def main() -> None:
     # --- Cas 2 : mono-formule -----------------------------------------------
     res2 = calculer([("Menus du marché 4C", 6)], grille)
     infos2 = InfosDevis(
-        client_nom="M. Paul DURAND",
-        client_adresse="3 avenue de la Gare, 84100 Orange",
+        civilite="M.",
+        client_nom="DURAND Paul",
+        client_rue="3 avenue de la Gare",
+        client_cp_ville="84100 Orange",
         devis_num="2026-0002",
         date_devis="07/06/2026",
         date_validite="07/07/2026",

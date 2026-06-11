@@ -21,6 +21,7 @@ from decimal import Decimal, InvalidOperation
 
 from src import compteur
 from src.calcul import Remise, Resultat, calculer, charger_grille, fmt_eur
+from src.documents.cgv import generer_cgv
 from src.documents.conditions import InfosConditions, generer_conditions
 from src.documents.devis import InfosDevis, _nom_ligne, generer_devis
 from src.documents.sepa import InfosMandat, generer_mandat
@@ -283,14 +284,16 @@ def generer_dossier(saisie: SaisieDossier, racine_sortie: Path = DOSSIERS) -> Re
     client_nom_doc = f"{client_nom}\n{tutelle}" if tutelle else client_nom
 
     # --- Devis --------------------------------------------------------------
-    # La ligne « Monsieur / Madame » de la trame reflète la civilité saisie ;
-    # l'identité est donc rendue SANS le préfixe M./Mme (pas de doublon).
-    civilite_longue = {"M.": "Monsieur", "Mme": "Madame"}.get(saisie.civilite.strip(), "")
-    nom_sans_civilite = " ".join(x for x in (saisie.prenom, saisie.nom) if x.strip())
+    # En-tête coordonnées (révision client 11/06/2026) : « M./Mme NOM Prénom »
+    # sur UNE ligne, puis l'adresse, puis « CP Ville ».
+    nom_prenom = " ".join(
+        x for x in (saisie.nom.strip().upper(), saisie.prenom.strip()) if x
+    )
     infos_devis = InfosDevis(
-        civilite=civilite_longue,
-        client_nom=f"{nom_sans_civilite}\n{tutelle}" if tutelle else nom_sans_civilite,
-        client_adresse=client_adresse,
+        civilite=saisie.civilite.strip(),
+        client_nom=f"{nom_prenom}\n{tutelle}" if tutelle else nom_prenom,
+        client_rue=saisie.adresse.strip(),
+        client_cp_ville=" ".join(x for x in (saisie.cp.strip(), saisie.ville.strip()) if x),
         devis_num=saisie.devis_num,
         date_devis=saisie.date_devis,
         date_validite=saisie.date_validite,
@@ -341,10 +344,14 @@ def generer_dossier(saisie: SaisieDossier, racine_sortie: Path = DOSSIERS) -> Re
             generer_mandat(infos_sepa, None, "", dossier / f"Mandat_SEPA_{base}.docx")
         )
 
-    # --- CGV (jointes telles quelles) ---------------------------------------
+    # --- CGV (jointes, zone de signature remplie : Nom/Prénom/Date) ---------
     if CGV.exists():
-        cible = dossier / CGV.name
-        shutil.copyfile(CGV, cible)
+        cible = dossier / f"CGV_{base}.docx"
+        try:
+            generer_cgv(saisie.nom, saisie.prenom, saisie.date_devis, cible, modele=CGV)
+        except Exception:  # noqa: BLE001 — CGV toujours jointes, même non remplies
+            shutil.copyfile(CGV, cible)
+            avertissements.append("CGV jointes sans Nom/Prénom/Date (remplissage impossible).")
         fichiers.append(cible)
     else:
         avertissements.append("CGV introuvables : non jointes.")
