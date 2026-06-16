@@ -46,6 +46,9 @@ _PARA_REMPLACEMENTS = {
     6:  "Date de validité : {{ date_validite }}",
     7:  "Prénom NOM du bénéficiaire des prestations si différent du client : {{ beneficiaire }}",
     8:  "Lieu de la prestation si différent de l’adresse du client : {{ lieu_prestation }}",
+    # Durée du contrat — indéterminée (défaut) ou date de fin si période définie
+    # (demande client 16/06/2026). Le « : » de la trame est un espace insécable.
+    9:  "Durée du Contrat : {{ duree_contrat }}",
     12: "Nombre de repas par semaine : {{ nb_repas_detail }}",
     13: "Formule choisie : {{ formule_detail }}",
     14: "Tarif de la formule de repas choisie : {{ tarif_ttc }} € TTC ({{ tarif_ht }} Euros HT)",
@@ -159,6 +162,7 @@ class InfosDevis:
     date_validite: str = ""
     beneficiaire: str = ""
     lieu_prestation: str = ""
+    duree_contrat: str = "indéterminée"  # « indéterminée » ou date de fin
 
 
 def _lignes_repas(resultat: Resultat) -> list:
@@ -268,6 +272,7 @@ def contexte_devis(resultat: Resultat, infos: InfosDevis) -> dict:
         "date_validite": infos.date_validite,
         "beneficiaire": beneficiaire,
         "lieu_prestation": lieu_prestation,
+        "duree_contrat": infos.duree_contrat.strip() or "indéterminée",
         # détail multi-formules (§6)
         "nb_repas_detail": _detail_repas(resultat),
         "formule_detail": _detail_formules(resultat),

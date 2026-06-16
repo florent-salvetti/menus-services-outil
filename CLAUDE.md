@@ -182,6 +182,9 @@ Le crédit d'impôt de 50 % porte **UNIQUEMENT sur la part « service de livrais
 - Jours de repas souhaités : cases Lundi → Dimanche
 - Commencement : « après délai 14 j » OU « avant fin du délai de rétractation » + date 1re livraison.
   **Défaut : « avant fin du délai »** (demande client).
+- **Durée du contrat (devis — révision client 16/06/2026)** : choix « Indéterminée »
+  (défaut) OU « Déterminée jusqu'au » + date. Renseigne la ligne « Durée du
+  Contrat : … » du devis (« indéterminée » ou « déterminée, jusqu'au JJ/MM/AAAA »).
 
 **Mode de paiement** (obligatoire — coche la bonne case des Conditions)
 - Prélèvement automatique / Virement bancaire / Chèque bancaire
@@ -245,7 +248,7 @@ Externaliser ces valeurs permet de revendre l'outil à une autre agence en chang
 - **Type d'app** : application de bureau **portable** (un dossier copiable, lancé directement, sans installation). **Cible : Windows** (PC de l'agence). Python est cohérent avec l'OCR ; packager avec **PyInstaller `--onedir`** (PAS `--onefile` : onefile se décompresse dans un dossier temporaire à chaque lancement, ce qui casse l'esprit « tout dans un dossier » et ralentit le démarrage). Compilation **sur Windows** (PyInstaller ne cross-compile pas). Tout (binaire, modèles, `config.json`, `tarifs.json`, base de dossiers) vit dans le dossier de l'app, en chemins relatifs.
 - **Génération Word** : remplir les modèles `.docx` par substitution de champs (recommandé : `python-docx`, ou un moteur de templating type `docxtpl` avec des balises `{{ }}` insérées dans des copies des modèles). Conserver la mise en page d'origine.
 - **Modèles** : travailler sur des **copies** des `.docx` officiels comme templates ; ne jamais écraser les originaux.
-- **Sortie** : un dossier par bénéficiaire contenant les documents générés (docx + PDF). Nommage : `NOM_Prénom_AAAA-MM-JJ/`. Fichiers : `Devis_NOM_Prénom.docx`, `Conditions_Particulieres_T1|T2_NOM_Prénom.docx`, `Mandat_SEPA_NOM_Prénom.docx` (sans accents : cohérent avec le slug NOM_Prénom).
+- **Sortie** : un dossier par bénéficiaire contenant les documents générés (docx + PDF). Nommage du dossier : `NOM_Prénom_AAAA-MM-JJ/` (slug sans accents). **Noms de fichiers (révision client 16/06/2026) : libellés lisibles `« <type> M./Mme NOM Prénom.docx »`, accents conservés** — `Devis M. NOM Prénom.docx`, `Conditions particulières de vente M. NOM Prénom.docx`, `Autorisation de prélèvement M. NOM Prénom.docx`, `Conditions générales de vente M. NOM Prénom.docx` (pas de T1/T2 dans le nom : la tournée figure dans le document). Caractères interdits Windows retirés.
 - **Impression groupée** : bouton « Tout imprimer » qui produit d'abord un **PDF unique fusionné** dans l'ordre logique (devis → conditions T1/T2 → mandat SEPA → CGV), puis l'envoie à l'imprimante par défaut. Le PDF fusionné est aussi conservé dans le dossier bénéficiaire (pratique pour archivage et signature). Préférer la fusion PDF à l'envoi de N fichiers séparés (ordre garanti, plus fiable).
 
 ---

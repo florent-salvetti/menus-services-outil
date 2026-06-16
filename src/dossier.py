@@ -75,6 +75,9 @@ class SaisieDossier:
     jours_repas: list[str] = field(default_factory=list)
     commencement: str = "attendre"
     date_premiere_livraison: str = ""
+    # Durée du contrat (devis) — indéterminée par défaut, sinon date de fin
+    duree_determinee: bool = False
+    duree_fin: str = ""
     # Paiement — l'autorisation de prélèvement n'est générée QUE pour
     # "prelevement", SANS coordonnées bancaires (le client joint son RIB).
     mode_paiement: str = ""         # "prelevement", "virement", "cheque" ou ""
@@ -112,6 +115,30 @@ def nom_dossier(saisie: SaisieDossier, jour: Optional[date] = None) -> str:
     """« NOM_Prénom_AAAA-MM-JJ » (slug sans accents ni espaces)."""
     jour = jour or date.today()
     return f"{_slug(saisie.nom)}_{_slug(saisie.prenom)}_{jour.isoformat()}"
+
+
+#: Caractères interdits dans un nom de fichier Windows.
+_CARS_INTERDITS_FICHIER = '<>:"/\\|?*'
+
+
+def _nom_lisible(s: SaisieDossier) -> str:
+    """« M. NOM Prénom » pour nommer les fichiers générés (demande client
+    16/06/2026 : noms lisibles, accents conservés). Les caractères interdits
+    sous Windows sont retirés ; ni point ni espace en fin (refusés par Windows).
+    """
+    libelle = " ".join(
+        x for x in (s.civilite.strip(), s.nom.strip().upper(), s.prenom.strip()) if x
+    )
+    libelle = "".join(" " if c in _CARS_INTERDITS_FICHIER else c for c in libelle)
+    return " ".join(libelle.split()).rstrip(" .") or "client"
+
+
+def _duree_contrat(s: SaisieDossier) -> str:
+    """« indéterminée » (défaut) ou « déterminée, jusqu'au JJ/MM/AAAA »."""
+    if not s.duree_determinee:
+        return "indéterminée"
+    fin = s.duree_fin.strip()
+    return f"déterminée, jusqu'au {fin}" if fin else "déterminée"
 
 
 def _client_complet(s: SaisieDossier) -> str:
@@ -276,7 +303,8 @@ def generer_dossier(saisie: SaisieDossier, racine_sortie: Path = DOSSIERS) -> Re
     client_nom = _client_complet(saisie)
     client_adresse = _adresse_complete(saisie)
     benef_prenom, benef_nom, benef_prenom_nom = _beneficiaire(saisie)
-    base = f"{_slug(saisie.nom)}_{_slug(saisie.prenom)}"
+    # Noms de fichiers lisibles « … M. NOM Prénom.docx » (demande client 16/06/2026).
+    lisible = _nom_lisible(saisie)
 
     # Tutelle : la mention suit l'identité du client sur chaque document
     # (docxtpl rend « \n » comme un saut de ligne).
@@ -299,8 +327,9 @@ def generer_dossier(saisie: SaisieDossier, racine_sortie: Path = DOSSIERS) -> Re
         date_validite=saisie.date_validite,
         beneficiaire=benef_prenom_nom,
         lieu_prestation=saisie.lieu_prestation if not saisie.benef_identique else "",
+        duree_contrat=_duree_contrat(saisie),
     )
-    fichiers.append(generer_devis(resultat, infos_devis, dossier / f"Devis_{base}.docx"))
+    fichiers.append(generer_devis(resultat, infos_devis, dossier / f"Devis {lisible}.docx"))
 
     # --- Conditions particulières (selon la tournée) ------------------------
     # Conditions : la trame a son PROPRE bloc tutelle (« Si le client a été
@@ -326,7 +355,7 @@ def generer_dossier(saisie: SaisieDossier, racine_sortie: Path = DOSSIERS) -> Re
     fichiers.append(
         generer_conditions(
             saisie.tournee, infos_cond, resultat,
-            dossier / f"Conditions_Particulieres_{saisie.tournee}_{base}.docx",
+            dossier / f"Conditions particulières de vente {lisible}.docx",
         )
     )
 
@@ -341,12 +370,12 @@ def generer_dossier(saisie: SaisieDossier, racine_sortie: Path = DOSSIERS) -> Re
             date_signature=saisie.date_devis,
         )
         fichiers.append(
-            generer_mandat(infos_sepa, None, "", dossier / f"Mandat_SEPA_{base}.docx")
+            generer_mandat(infos_sepa, None, "", dossier / f"Autorisation de prélèvement {lisible}.docx")
         )
 
     # --- CGV (jointes, zone de signature remplie : Nom/Prénom/Date) ---------
     if CGV.exists():
-        cible = dossier / f"CGV_{base}.docx"
+        cible = dossier / f"Conditions générales de vente {lisible}.docx"
         try:
             generer_cgv(saisie.nom, saisie.prenom, saisie.date_devis, cible, modele=CGV)
         except Exception:  # noqa: BLE001 — CGV toujours jointes, même non remplies

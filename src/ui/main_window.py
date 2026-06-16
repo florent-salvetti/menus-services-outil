@@ -325,6 +325,27 @@ class MainWindow(QWidget):
         g.addWidget(QLabel("Fait à"), 1, 0)
         g.addWidget(self.lieu, 1, 1)
 
+        # Durée du contrat : indéterminée (défaut) ou période définie + date.
+        self.duree_indeterminee = QRadioButton("Indéterminée")
+        self.duree_determinee = QRadioButton("Déterminée jusqu'au")
+        self.duree_indeterminee.setChecked(True)
+        grp_d = QButtonGroup(self)
+        grp_d.addButton(self.duree_indeterminee)
+        grp_d.addButton(self.duree_determinee)
+        self.duree_indeterminee.toggled.connect(self._toggle_duree)
+        self.duree_fin = QLineEdit()
+        self.duree_fin.setPlaceholderText("jj/mm/aaaa")
+        self.duree_fin.setFixedWidth(110)
+        ligne_d = QHBoxLayout()
+        ligne_d.setSpacing(16)
+        ligne_d.addWidget(self.duree_indeterminee)
+        ligne_d.addWidget(self.duree_determinee)
+        ligne_d.addWidget(self.duree_fin)
+        ligne_d.addStretch()
+        g.addWidget(QLabel("Durée du contrat"), 1, 2)
+        g.addLayout(ligne_d, 1, 3, 1, 3)
+        self._toggle_duree()
+
         # Réduction commerciale optionnelle (ligne dédiée sur le devis).
         self.remise_active = QCheckBox("Appliquer une réduction")
         self.remise_active.stateChanged.connect(self._toggle_remise)
@@ -345,6 +366,12 @@ class MainWindow(QWidget):
         g.addLayout(ligne_r, 2, 2, 1, 4)
         self._toggle_remise()
         self._form.addWidget(box)
+
+    def _toggle_duree(self) -> None:
+        determinee = self.duree_determinee.isChecked()
+        self.duree_fin.setEnabled(determinee)
+        if not determinee:
+            self.duree_fin.clear()
 
     def _toggle_remise(self) -> None:
         actif = self.remise_active.isChecked()
@@ -405,6 +432,8 @@ class MainWindow(QWidget):
             jours_repas=[j for j, cb in self.jours.items() if cb.isChecked()],
             commencement="attendre" if self.comm_attendre.isChecked() else "avant",
             date_premiere_livraison=self.date_premiere.text(),
+            duree_determinee=self.duree_determinee.isChecked(),
+            duree_fin=self.duree_fin.text(),
             mode_paiement=self._mode_paiement(),
             devis_num=self.devis_num.text(), date_devis=self.date_devis.text(),
             date_validite=self.date_validite.text(), lieu=self.lieu.text(),

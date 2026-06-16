@@ -55,9 +55,9 @@ def _selftest() -> int:
         print(f"  - {f.name} : {'OK' if f.exists() else 'MANQUANT'}")
     docs_ok = all(f.exists() for f in g.fichiers)
     a_devis = any("Devis" in f.name for f in g.fichiers)
-    a_cond = any("Conditions" in f.name for f in g.fichiers)
-    a_sepa = any("Mandat_SEPA" in f.name for f in g.fichiers)
-    a_cgv = any("CGV" in f.name for f in g.fichiers)
+    a_cond = any("Conditions particulières de vente" in f.name for f in g.fichiers)
+    a_sepa = any("Autorisation de prélèvement" in f.name for f in g.fichiers)
+    a_cgv = any("Conditions générales de vente" in f.name for f in g.fichiers)
     print(f"  devis={a_devis} conditions={a_cond} mandat={a_sepa} cgv={a_cgv}")
 
     # 3. OCR : Tesseract embarqué trouvé + lecture réelle d'une image générée
