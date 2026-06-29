@@ -91,25 +91,38 @@ Source : `TArifs_2026.xlsx`, feuille « Tarifs 26 », tarifs au 01/01/2026. 29 l
 
 **Règle de remplissage :** garder la trame telle quelle. Le moteur calcule **ligne par ligne** en interne, puis écrit dans chaque champ existant le **résultat consolidé**, en faisant apparaître le détail des formules sur les deux premières lignes.
 
-Rendu attendu pour l'exemple ci-dessus (**révision client 10/06/2026 : les
-lignes « Tarif de la formule » et « dont … » affichent le tarif d'UN repas**,
-un montant par formule séparé par « / », PAS le total hebdomadaire) :
+Rendu attendu pour l'exemple ci-dessus (**révision client 29/06/2026 : les
+lignes « Tarif de la formule » et « dont … » affichent le CUMUL (somme) des
+tarifs unitaires de chaque formule ET supplément ventilable**, PAS le total
+hebdomadaire, qui reste sur sa ligne dédiée) :
 
 ```
 Nombre de repas par semaine : 6 + 4 = 10 repas
 Formule choisie : Menus du marché 4C (×6) + Menus du jour 5C (×4)
-Tarif de la formule de repas choisie : 12,80 / 13,50 € TTC (11,64 / 12,27 Euros HT)
-   - dont Prix du repas : 6,42 / 6,84 € TTC (TVA 10% — 5,84 / 6,22 Euros HT)
-   - dont prix du Service de livraison : 6,38 / 6,66 € TTC (TVA 10% — 5,80 / 6,05 Euros HT)
+Tarif de la formule de repas choisie : 26,30 € TTC (23,91 Euros HT)   ← 12,80 + 13,50
+   - dont Prix du repas : 13,27 € TTC (TVA 10% — 12,06 Euros HT)       ← 6,42 + 6,84
+   - dont prix du Service de livraison : 13,03 € TTC (TVA 10% — 11,85 Euros HT) ← 6,38 + 6,66
 Devis pour 1 semaine : 130,80 € TTC          ← totaux hebdo/mensuels consolidés
 Coût mensuel moyen : 566,80 € TTC (130,80 × 52/12)
 Total après crédit d'impôt : (reste à charge, cf. §7)
 ```
 
-Les tarifs unitaires sont les prix CATALOGUE (la remise éventuelle n'apparaît
-que sur sa ligne dédiée et sur les totaux). Si une ligne porte un **régime
-particulier** (diabétique, sans sel, mixé), il s'affiche au bout du nom :
-« Menus du marché 4C – diabétique (×6) ».
+> **Historique.** La révision 10/06/2026 affichait ces lignes en tarif d'UN
+> repas, un montant par formule séparé par « / » (« 12,80 / 13,50 »). La
+> révision 29/06/2026 les remplace par le cumul (somme), car en multi-lignes le
+> tarif / la part repas / la part service ne s'additionnaient pas — alors que
+> l'hebdo/mensuel, eux, sommaient bien toutes les lignes (signalé par le
+> client). L'invariant `part repas + part service = tarif` reste vrai sur le
+> cumul. Le cumul porte sur les lignes **ventilables** (vrais repas +
+> suppléments ayant une décomposition repas/service) ; les lignes sans
+> décomposition (Pain, prestations de service) ne portent pas de part
+> repas/service et restent hors de ces sous-totaux (mais comptent dans l'hebdo).
+> En mono-formule, le cumul = le tarif unitaire de la formule (inchangé).
+
+Les tarifs cumulés sont issus des prix CATALOGUE (la remise éventuelle
+n'apparaît que sur sa ligne dédiée et sur les totaux). Si une ligne porte un
+**régime particulier** (diabétique, sans sel, mixé), il s'affiche au bout du
+nom : « Menus du marché 4C – diabétique (×6) ».
 
 ---
 

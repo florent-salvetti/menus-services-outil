@@ -10,13 +10,16 @@ Principe (CLAUDE.md §5, §11) :
 
 Le rendu multi-formules suit le §6 :
 - « Nombre de repas » et « Formule choisie » montrent le détail par formule ;
-- les lignes de tarif portent les totaux consolidés ;
+- les lignes de tarif (tarif, dont repas, dont service) portent le CUMUL
+  (somme) des tarifs unitaires de chaque formule et supplément ventilable
+  (révision client 29/06/2026) ;
 - la 2e ligne du tableau porte le reste à charge après crédit d'impôt.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
+from decimal import Decimal
 from pathlib import Path
 from typing import Optional
 
@@ -202,28 +205,45 @@ def _detail_formules(resultat: Resultat) -> str:
     )
 
 
-def _join_unitaires(valeurs) -> str:
-    """Joint des montants UNITAIRES par « / » (un par formule), « — » si aucun."""
-    textes = [fmt_num(v) for v in valeurs if v is not None]
-    return " / ".join(textes) if textes else "—"
+def _somme_unitaire(valeurs) -> str:
+    """Cumule (somme) des montants UNITAIRES, « — » si aucun.
 
-
-def tarifs_unitaires(resultat: Resultat) -> dict:
-    """Tarifs AU REPAS (unitaires, prix catalogue) pour devis et CPV.
-
-    Demande client : les lignes « Tarif de la formule », « dont Prix du
-    repas » et « dont prix du Service » affichent le tarif d'UN repas, pas le
-    total hebdomadaire. Multi-formules : un montant par formule, séparés par
-    « / », dans l'ordre de la ligne « Formule choisie ».
+    Révision client 29/06/2026 : en multi-lignes (2 formules, ou formule +
+    supplément), on ADDITIONNE les prix unitaires de chaque composante au lieu
+    de les juxtaposer (« 12,80 / 13,50 » → « 26,30 »).
     """
-    lignes = _lignes_repas(resultat)  # alignées sur « Formule choisie »
+    montants = [v for v in valeurs if v is not None]
+    if not montants:
+        return "—"
+    return fmt_num(sum(montants, Decimal(0)))
+
+
+def tarifs_cumules(resultat: Resultat) -> dict:
+    """Tarifs AU REPAS cumulés (prix catalogue) pour devis et CPV.
+
+    Les lignes « Tarif de la formule », « dont Prix du repas » et « dont prix
+    du Service » affichent le CUMUL (somme) des tarifs unitaires de chaque
+    formule ET supplément retenu — PAS le total hebdomadaire (qui reste sur la
+    ligne « Devis pour 1 semaine »).
+
+    Révision client 29/06/2026 : auparavant les montants étaient juxtaposés par
+    « / » et seules les vraies formules-repas étaient prises en compte ; le
+    tarif, la part repas et la part service ne « cumulaient » donc pas en
+    multi-lignes (alors que l'hebdo/mensuel, eux, sommaient bien toutes les
+    lignes). On cumule désormais sur les lignes VENTILABLES (repas +
+    suppléments ayant une décomposition repas/service) : l'invariant
+    repas + service = tarif reste vrai. Les lignes sans décomposition (Pain,
+    prestations de service) ne portent pas de part repas/service et sont donc
+    hors de ces sous-totaux.
+    """
+    lignes = [l for l in resultat.lignes if l.formule.ventilable]
     return {
-        "tarif_ttc": _join_unitaires(l.formule.ttc for l in lignes),
-        "tarif_ht": _join_unitaires(l.formule.ht for l in lignes),
-        "repas_ttc": _join_unitaires(l.formule.repas_ttc for l in lignes),
-        "repas_ht": _join_unitaires(l.formule.repas_ht for l in lignes),
-        "service_ttc": _join_unitaires(l.formule.service_ttc for l in lignes),
-        "service_ht": _join_unitaires(l.formule.service_ht for l in lignes),
+        "tarif_ttc": _somme_unitaire(l.formule.ttc for l in lignes),
+        "tarif_ht": _somme_unitaire(l.formule.ht for l in lignes),
+        "repas_ttc": _somme_unitaire(l.formule.repas_ttc for l in lignes),
+        "repas_ht": _somme_unitaire(l.formule.repas_ht for l in lignes),
+        "service_ttc": _somme_unitaire(l.formule.service_ttc for l in lignes),
+        "service_ht": _somme_unitaire(l.formule.service_ht for l in lignes),
     }
 
 
@@ -278,8 +298,8 @@ def contexte_devis(resultat: Resultat, infos: InfosDevis) -> dict:
         "formule_detail": _detail_formules(resultat),
         # remise commerciale (ligne masquée si vide)
         "remise_detail": _detail_remise(resultat),
-        # tarifs AU REPAS (unitaires — demande client), un montant par formule
-        **tarifs_unitaires(resultat),
+        # tarifs AU REPAS cumulés (somme des formules + suppléments ventilables)
+        **tarifs_cumules(resultat),
         # totaux hebdo / mensuels consolidés (après remise éventuelle)
         "hebdo_ttc": fmt_num(resultat.total_hebdo_ttc),
         "mensuel_ttc": fmt_num(resultat.cout_mensuel_ttc),

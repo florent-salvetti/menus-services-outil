@@ -36,7 +36,7 @@ from docxtpl import DocxTemplate
 from src.calcul import Resultat
 from src.documents.devis import (  # mêmes rendus « formule » / tarifs que le devis
     _detail_formules,
-    tarifs_unitaires,
+    tarifs_cumules,
 )
 
 from src.chemins import RACINE
@@ -329,9 +329,9 @@ def contexte_conditions(infos: InfosConditions, resultat: Resultat) -> dict:
         "marque_prelevement": "X" if infos.mode_paiement == "prelevement" else "",
         "marque_virement": "X" if infos.mode_paiement == "virement" else "",
         "marque_cheque": "X" if infos.mode_paiement == "cheque" else "",
-        # coût : MÊMES tarifs AU REPAS (unitaires) que le devis
+        # coût : MÊMES tarifs AU REPAS cumulés que le devis
         "formule_detail": _detail_formules(resultat),
-        **tarifs_unitaires(resultat),
+        **tarifs_cumules(resultat),
         # « Fait à … le … »
         "lieu": infos.lieu,
         "date": infos.date,
